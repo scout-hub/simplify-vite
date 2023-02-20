@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 11:45:51
+ * @LastEditTime: 2023-02-20 14:51:49
  */
 // 增加如下代码
 import path from "path";
@@ -33,3 +33,8 @@ export const BARE_IMPORT_RE = /^[\w@][^:]/;
 
 // 预构建产物默认存放在 node_modules 中的 .m-vite 目录中
 export const PRE_BUNDLE_DIR = path.join("node_modules", ".m-vite");
+
+export const JS_TYPES_RE = /\.(?:j|t)sx?$|\.mjs$/;
+export const QEURY_RE = /\?.*$/s;
+export const HASH_RE = /#.*$/s;
+export const DEFAULT_EXTERSIONS = [".tsx", ".ts", ".jsx", "js"];
