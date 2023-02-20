@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "simplify-vite": "bin/simplify-vite"
+  },
   "scripts": {
     "start": "tsup --watch",
     "build": "tsup --minify"
@@ -19,11 +22,6 @@
   },
   "homepage": "https://github.com/scout-hub/simplify-vite#readme",
   "dependencies": {
-    "@types/connect": "^3.4.35",
-    "@types/debug": "^4.1.7",
-    "@types/fs-extra": "^11.0.1",
-    "@types/resolve": "^1.20.2",
-    "@types/ws": "^8.5.4",
     "cac": "^6.7.14",
     "chokidar": "^3.5.3",
     "connect": "^3.7.0",
@@ -36,7 +34,15 @@
     "resolve": "^1.22.1",
     "rollup": "^3.17.1",
     "sirv": "^2.0.2",
-    "tsup": "^6.6.3",
     "ws": "^8.12.1"
+  },
+  "devDependencies": {
+    "@types/connect": "^3.4.35",
+    "@types/debug": "^4.1.7",
+    "@types/fs-extra": "^11.0.1",
+    "@types/node": "^18.14.0",
+    "@types/resolve": "^1.20.2",
+    "@types/ws": "^8.5.4",
+    "tsup": "^6.6.3"
   }
 }
