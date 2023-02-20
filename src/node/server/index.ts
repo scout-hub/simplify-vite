@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 15:15:07
+ * @LastEditTime: 2023-02-20 16:17:16
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -15,6 +15,7 @@ import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import type { Plugin } from "../plugin";
 import { indexHtmlMiddware } from "./middlewares/indexHtml";
 import { transformMiddleware } from "./middlewares/transform";
+import { staticMiddleware } from "./middlewares/static";
 
 export const startDevServer = async () => {
     const app = connect();
@@ -38,6 +39,7 @@ export const startDevServer = async () => {
 
     app.use(indexHtmlMiddware(serverContext));
     app.use(transformMiddleware(serverContext));
+    app.use(staticMiddleware(serverContext.root));
 
     app.listen(3000, async () => {
         await optimize(root);

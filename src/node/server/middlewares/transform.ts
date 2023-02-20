@@ -2,12 +2,14 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:37:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 14:40:52
+ * @LastEditTime: 2023-02-20 16:01:09
  */
 import { NextHandleFunction } from "connect";
 import {
     isJSRequest,
     cleanUrl,
+    isCSSRequest,
+    isImportRequest
 } from "../../utils";
 import { ServerContext } from "../index";
 import createDebug from "debug";
@@ -49,7 +51,7 @@ export function transformMiddleware(
         const url = req.url;
         debug("transformMiddleware: %s", url);
         // transform JS request
-        if (isJSRequest(url)) {
+        if (isJSRequest(url) || isCSSRequest(url) || isImportRequest(url)) {
             // 核心编译函数
             let result: SourceDescription | null | undefined | string = await transformRequest(url, serverContext);
             if (!result) {

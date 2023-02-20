@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 14:38:26
+ * @LastEditTime: 2023-02-20 16:01:38
  */
 import os from "os";
 import path from "path";
@@ -24,3 +24,18 @@ export const isJSRequest = (id: string): boolean => {
 
 export const cleanUrl = (url: string): string =>
     url.replace(HASH_RE, "").replace(QEURY_RE, "");
+
+export const isCSSRequest = (id: string): boolean =>
+    cleanUrl(id).endsWith(".css");
+
+export function isImportRequest(url: string): boolean {
+    return url.endsWith("?import");
+}
+
+export function getShortName(file: string, root: string) {
+    return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
+}
+
+export function removeImportQuery(url: string): string {
+    return url.replace(/\?import$/, "");
+}
