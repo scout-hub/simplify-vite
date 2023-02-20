@@ -1,0 +1,42 @@
+{
+  "name": "simplify-vite",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsup --watch",
+    "build": "tsup --minify"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scout-hub/simplify-vite.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/scout-hub/simplify-vite/issues"
+  },
+  "homepage": "https://github.com/scout-hub/simplify-vite#readme",
+  "dependencies": {
+    "@types/connect": "^3.4.35",
+    "@types/debug": "^4.1.7",
+    "@types/fs-extra": "^11.0.1",
+    "@types/resolve": "^1.20.2",
+    "@types/ws": "^8.5.4",
+    "cac": "^6.7.14",
+    "chokidar": "^3.5.3",
+    "connect": "^3.7.0",
+    "debug": "^4.3.4",
+    "es-module-lexer": "^1.1.1",
+    "esbuild": "^0.17.9",
+    "fs-extra": "^11.1.0",
+    "magic-string": "^0.29.0",
+    "picocolors": "^1.0.0",
+    "resolve": "^1.22.1",
+    "rollup": "^3.17.1",
+    "sirv": "^2.0.2",
+    "tsup": "^6.6.3",
+    "ws": "^8.12.1"
+  }
+}
