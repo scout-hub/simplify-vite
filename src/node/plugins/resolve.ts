@@ -1,3 +1,9 @@
+/*
+ * @Author: Zhouqi
+ * @Date: 2023-02-20 14:50:16
+ * @LastEditors: Zhouqi
+ * @LastEditTime: 2023-02-21 15:49:08
+ */
 import resolve from "resolve";
 import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
@@ -17,6 +23,7 @@ export function resolvePlugin(): Plugin {
         async resolveId(id: string, importer?: string) {
             // 1. 绝对路径
             if (path.isAbsolute(id)) {
+                // 本身就是绝对路径，直接返回
                 if (await pathExists(id)) {
                     return { id };
                 }

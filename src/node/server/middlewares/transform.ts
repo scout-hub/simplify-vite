@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:37:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 16:01:09
+ * @LastEditTime: 2023-02-21 15:47:07
  */
 import { NextHandleFunction } from "connect";
 import {
@@ -23,7 +23,7 @@ export async function transformRequest(
 ) {
     const { pluginContainer } = serverContext;
     url = cleanUrl(url);
-    // 简单来说，就是依次调用插件容器的 resolveId、load、transform 方法
+    // 依次调用插件容器的 resolveId、load、transform 方法
     const resolvedResult = await pluginContainer.resolveId(url);
     let transformResult;
     if (resolvedResult?.id) {

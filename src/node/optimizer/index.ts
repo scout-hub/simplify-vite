@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 11:48:31
+ * @LastEditTime: 2023-02-21 15:12:25
  */
 import path from "path";
 import { build } from "esbuild";
@@ -12,9 +12,9 @@ import { preBundlePlugin } from "./preBundlePlugin";
 import { PRE_BUNDLE_DIR } from "../constants";
 
 export const optimize = async (root: string) => {
-    // 1. 确定入口
+    // 1. 这里暂定入口为src/main.tsx
     const entry = path.resolve(root, "src/main.tsx");
-    // 2. 从入口处扫描依赖
+    // 2. 从入口处扫描依赖，获取需要与构建的依赖
     const deps = new Set<string>();
     await build({
         entryPoints: [entry],

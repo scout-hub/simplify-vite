@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 11:50:31
+ * @LastEditTime: 2023-02-21 15:33:21
  */
 import { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";
@@ -37,7 +37,6 @@ export function preBundlePlugin(deps: Set<string>): Plugin {
                                 namespace: "dep",
                             }
                             : {
-                                // 因为走到 onResolve 了，所以这里的 path 就是绝对路径了
                                 path: resolve.sync(id, { basedir: process.cwd() }),
                             };
                     }
@@ -60,7 +59,6 @@ export function preBundlePlugin(deps: Set<string>): Plugin {
                     // cjs
                     if (!imports.length && !exports.length) {
                         // 构造代理模块
-                        // 下面的代码后面会解释
                         const res = require(entryPath);
                         const specifiers = Object.keys(res);
                         proxyModule.push(
