@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 14:51:49
+ * @LastEditTime: 2023-02-22 16:34:54
  */
 // 增加如下代码
 import path from "path";
@@ -38,3 +38,5 @@ export const JS_TYPES_RE = /\.(?:j|t)sx?$|\.mjs$/;
 export const QEURY_RE = /\?.*$/s;
 export const HASH_RE = /#.*$/s;
 export const DEFAULT_EXTERSIONS = [".tsx", ".ts", ".jsx", "js"];
+export const HMR_PORT = 24678;
+export const CLIENT_PUBLIC_PATH = "/@vite/client";

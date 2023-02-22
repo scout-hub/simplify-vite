@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 16:17:16
+ * @LastEditTime: 2023-02-22 16:32:44
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -16,6 +16,11 @@ import type { Plugin } from "../plugin";
 import { indexHtmlMiddware } from "./middlewares/indexHtml";
 import { transformMiddleware } from "./middlewares/transform";
 import { staticMiddleware } from "./middlewares/static";
+import { ModuleGraph } from "../ModuleGraph";
+import chokidar, { FSWatcher } from "chokidar";
+import { createWebSocketServer } from "../ws";
+import { bindingHMREvents } from "../hmr";
+import { normalizePath } from "../utils";
 
 export const startDevServer = async () => {
     const app = connect();
@@ -23,13 +28,27 @@ export const startDevServer = async () => {
     const startTime = Date.now();
     const plugins = resolvePlugins();
     const pluginContainer = createPluginContainer(plugins);
+    const moduleGraph = new ModuleGraph((url) => pluginContainer.resolveId(url));
+
+    const watcher = chokidar.watch(root, {
+        ignored: ["**/node_modules/**", "**/.git/**"],
+        ignoreInitial: true,
+    });
+
+    // WebSocket 对象
+    const ws = createWebSocketServer(app);
 
     const serverContext: ServerContext = {
         root: process.cwd(),
         app,
         pluginContainer,
         plugins,
+        moduleGraph,
+        ws,
+        watcher
     };
+
+    bindingHMREvents(serverContext);
 
     for (const plugin of plugins) {
         if (plugin.configureServer) {
@@ -56,4 +75,7 @@ export interface ServerContext {
     pluginContainer: PluginContainer;
     app: connect.Server;
     plugins: Plugin[];
+    moduleGraph: ModuleGraph;
+    ws: { send: (data: any) => void; close: () => void };
+    watcher: FSWatcher;
 }

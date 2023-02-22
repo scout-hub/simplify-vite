@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:37:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-21 15:47:07
+ * @LastEditTime: 2023-02-21 16:49:37
  */
 import { NextHandleFunction } from "connect";
 import {
@@ -13,7 +13,6 @@ import {
 } from "../../utils";
 import { ServerContext } from "../index";
 import createDebug from "debug";
-import { SourceDescription } from "rollup";
 
 const debug = createDebug("dev");
 
@@ -21,8 +20,13 @@ export async function transformRequest(
     url: string,
     serverContext: ServerContext
 ) {
-    const { pluginContainer } = serverContext;
+    const { pluginContainer, moduleGraph } = serverContext;
     url = cleanUrl(url);
+    // 查找缓存的模块
+    let mod = await moduleGraph.getModuleByUrl(url);
+    if (mod && mod.transformResult) {
+        return mod.transformResult;
+    }
     // 依次调用插件容器的 resolveId、load、transform 方法
     const resolvedResult = await pluginContainer.resolveId(url);
     let transformResult;
@@ -31,12 +35,18 @@ export async function transformRequest(
         if (typeof code === "object" && code !== null) {
             code = code.code;
         }
+        const { moduleGraph } = serverContext;
+        mod = await moduleGraph.ensureEntryFromUrl(url);
         if (code) {
             transformResult = await pluginContainer.transform(
                 code as string,
                 resolvedResult?.id
             );
         }
+    }
+    // 缓存模块
+    if (mod) {
+        mod.transformResult = transformResult;
     }
     return transformResult;
 }
@@ -53,7 +63,7 @@ export function transformMiddleware(
         // transform JS request
         if (isJSRequest(url) || isCSSRequest(url) || isImportRequest(url)) {
             // 核心编译函数
-            let result: SourceDescription | null | undefined | string = await transformRequest(url, serverContext);
+            let result = await transformRequest(url, serverContext);
             if (!result) {
                 return next();
             }

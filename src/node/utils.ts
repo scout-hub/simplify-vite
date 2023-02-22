@@ -2,11 +2,13 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 16:01:38
+ * @LastEditTime: 2023-02-22 16:41:49
  */
 import os from "os";
 import path from "path";
-import { HASH_RE, QEURY_RE, JS_TYPES_RE } from "./constants";
+import { HASH_RE, QEURY_RE, JS_TYPES_RE, CLIENT_PUBLIC_PATH } from "./constants";
+
+const INTERNAL_LIST = [CLIENT_PUBLIC_PATH, "/@react-refresh"];
 
 export const slash = (p: string): string => p.replace(/\\/g, "/");
 export const isWindows = os.platform() === "win32";
@@ -38,4 +40,8 @@ export function getShortName(file: string, root: string) {
 
 export function removeImportQuery(url: string): string {
     return url.replace(/\?import$/, "");
+}
+
+export function isInternalRequest(url: string): boolean {
+    return INTERNAL_LIST.includes(url);
 }
