@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-22 16:32:44
+ * @LastEditTime: 2023-05-12 16:09:05
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -20,9 +20,12 @@ import { ModuleGraph } from "../ModuleGraph";
 import chokidar, { FSWatcher } from "chokidar";
 import { createWebSocketServer } from "../ws";
 import { bindingHMREvents } from "../hmr";
-import { normalizePath } from "../utils";
+import type { InlineConfig } from "../config";
+import { resolveConfig } from "../config";
 
-export const startDevServer = async () => {
+export const createServer = async (inlineConfig: InlineConfig = {}) => {
+    // 解析默认配置
+    const config = resolveConfig(inlineConfig, 'serve');
     const app = connect();
     const root = process.cwd();
     const startTime = Date.now();

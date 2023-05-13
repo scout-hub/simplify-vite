@@ -2,15 +2,17 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-21 15:49:08
+ * @LastEditTime: 2023-05-13 22:16:14
  */
+import path from "path";
+import fs from 'fs';
 import resolve from "resolve";
 import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
-import path from "path";
 import { pathExists } from "fs-extra";
 import { DEFAULT_EXTERSIONS } from "../constants";
 import { cleanUrl, normalizePath } from "../utils";
+import { PackageData, resolvePackageData } from "../packages";
 
 export function resolvePlugin(): Plugin {
     let serverContext: ServerContext;
@@ -70,4 +72,80 @@ export function resolvePlugin(): Plugin {
             return null;
         },
     };
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 路径解析
+ */
+export const tryNodeResolve = (
+    id: string,
+    importer: string | null | undefined,
+    options: Record<string, any>,
+    targetWeb: boolean
+) => {
+    const { packageCache, preserveSymlinks } = options;
+    // 解析斜杠资源路径 ====>import xxx from 'a/b';
+    let nestedPath = id;
+    const possiblePkgIds = [];
+    for (let prevSlashIndex = -1; ;) {
+        let slashIndex = nestedPath.indexOf('/', prevSlashIndex + 1);
+        // 没找到/模式引入的方式，则将/的位置定义到最后
+        slashIndex === -1 && (slashIndex = nestedPath.length);
+        // 截取/之前的部分
+        const part = nestedPath.slice(prevSlashIndex + 1, (prevSlashIndex = slashIndex));
+        // 路径已经解析完了
+        if (!part) {
+            break;
+        }
+        /**
+         * 假设带有扩展名的路径部分不是包根，除了 
+         * 第一个路径部分（因为包名称中允许使用句点）。 
+         * 同时，如果第一个路径部分以“@”开头，则跳过（因为“@foo/bar”应该被视为顶级路径)
+         */
+        if (possiblePkgIds.length ? path.extname(part) : part[0] === '@') {
+            continue;
+        }
+        const possiblePkgId = nestedPath.slice(0, slashIndex);
+        possiblePkgIds.push(possiblePkgId);
+    }
+    let basedir = '';
+    if (importer &&
+        path.isAbsolute(importer) &&
+        fs.existsSync(cleanUrl(importer))) {
+        basedir = path.dirname(importer);
+    }
+    // 获取包的根路径
+    const rootPkgId = possiblePkgIds[0];
+    const rootPkg = resolvePackageData(rootPkgId, basedir, preserveSymlinks, packageCache);
+    let pkg: PackageData;
+    let pkgId = '';
+    // 如果package.json中存在的export，则将包ID指定为rootPkgId，后面需要根据export查找如何文件
+    if (rootPkg?.data?.exports) {
+        pkgId = rootPkgId;
+        pkg = rootPkg;
+    }
+    let resolveId = resolvePackageEntry;
+    let unresolvedId = pkgId;
+    let resolved;
+    resolved = resolveId(unresolvedId, pkg!, targetWeb, options);
+    return {
+        id
+    }
+};
+
+/**
+ * @author: Zhouqi
+ * @description: 解析package.json中的入口文件
+ */
+export const resolvePackageEntry = (
+    id: string,
+    { dir, data }: PackageData,
+    targetWeb: boolean,
+    options: any
+) => {
+    let entryPoint;
+    if (data.exports) {
+        // entryPoint = resolveExports(data, '.', options, targetWeb);
+    }
 }

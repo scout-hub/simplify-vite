@@ -2,10 +2,9 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 09:54:01
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 16:47:30
+ * @LastEditTime: 2023-05-12 15:38:26
  */
 import cac from "cac";
-import { startDevServer } from "./server";
 
 const cli = cac();
 cli
@@ -13,7 +12,8 @@ cli
     .alias("serve")
     .alias("dev")
     .action(async () => {
-        await startDevServer();
+        const { createServer } = await import("./server");
+        await createServer();
     });
 cli.help();
 cli.parse();
