@@ -2,11 +2,12 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-13 22:16:14
+ * @LastEditTime: 2023-05-14 22:16:15
  */
 import path from "path";
 import fs from 'fs';
 import resolve from "resolve";
+import { exports } from 'resolve.exports';
 import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
 import { pathExists } from "fs-extra";
@@ -129,9 +130,10 @@ export const tryNodeResolve = (
     let unresolvedId = pkgId;
     let resolved;
     resolved = resolveId(unresolvedId, pkg!, targetWeb, options);
+    // TODO 解决构建的包副作用，以便 rollup 可以更好地执行 tree-shaking
     return {
-        id
-    }
+        id: resolved
+    };
 };
 
 /**
@@ -140,12 +142,75 @@ export const tryNodeResolve = (
  */
 export const resolvePackageEntry = (
     id: string,
-    { dir, data }: PackageData,
+    { dir, data, setResolvedCache, getResolvedCache }: PackageData,
     targetWeb: boolean,
     options: any
 ) => {
+    const cached = getResolvedCache('.');
+    if (cached) {
+        return cached;
+    }
     let entryPoint;
     if (data.exports) {
-        // entryPoint = resolveExports(data, '.', options, targetWeb);
+        entryPoint = resolveExports(data, '.', options, targetWeb);
+    }
+    // 如果没有解析道exports，则使用main属性的值
+    entryPoint || (entryPoint = data.main);
+    // 获取入口文件的绝对路径
+    const entryPointPath = path.join(dir, entryPoint);
+    const resolvedEntryPoint = tryFsResolve(entryPointPath, options);
+    // 缓存解析结果
+    if (resolvedEntryPoint) {
+        setResolvedCache('.', resolvedEntryPoint);
+        return resolvedEntryPoint;
     }
 }
+
+/**
+ * @author: Zhouqi
+ * @description: 解析epxorts
+ */
+const resolveExports = (
+    pkg: PackageData['data'],
+    key: string,
+    options: any,
+    targetWeb: boolean,
+) => {
+    const conditions: string[] = [];
+    // 获取package.json中对应type的入口文件
+    const result = exports(pkg, key, {
+        browser: targetWeb && !conditions.includes('node'),
+        require: options.isRequire && !conditions.includes('import'),
+        conditions
+    });
+    return result ? result[0] : undefined;
+}
+
+const tryFsResolve = (fsPath: string, options: any, tryIndex = true, targetWeb = true) => {
+    let res;
+    if ((res = tryResolveFile(fsPath, '', options))) {
+        return res;
+    }
+};
+
+/**
+ * @author: Zhouqi
+ * @description: 获取文件信息状态
+ */
+const tryResolveFile = (
+    file: string,
+    postfix: string,
+    options: any
+) => {
+    return getRealPath(file, options.preserveSymlinks) + postfix;
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 获取真实路径
+ */
+const getRealPath = (resolved: string, preserveSymlinks?: boolean) => {
+    // 用于同步计算给定路径的规范路径名。它是通过解决。,..以及路径中的符号链接，并返回解析后的路径
+    resolved = fs.realpathSync(resolved);
+    return normalizePath(resolved);
+};

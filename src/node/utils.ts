@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-13 21:48:43
+ * @LastEditTime: 2023-05-14 22:07:31
  */
 import os from "os";
 import path from "path";
@@ -102,7 +102,6 @@ export function resolveFrom(id: string, basedir: string, preserveSymlinks = fals
      * path 要解析的路径
      * preserveSymlinks 为true时，会将原路径返回;为false时，会调用toRealPath方法，返回软链原始文件的路径。
      */
-    console.log(id);
     return resolve.sync(id, {
         basedir,
         paths: [],

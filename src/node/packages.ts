@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-13 21:50:36
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-13 22:03:09
+ * @LastEditTime: 2023-05-14 22:15:38
  */
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +10,9 @@ import { resolveFrom } from "./utils";
 
 export interface PackageData {
     dir: string
+    nodeResolvedImports: Record<string, string | undefined>
+    setResolvedCache: (key: string, entry: string) => void
+    getResolvedCache: (key: string) => string | undefined
     data: {
         [field: string]: any
         name: string
@@ -55,9 +58,16 @@ export function loadPackageData(pkgPath: string, preserveSymlinks?: boolean, pac
     // 获取文件目录
     const pkgDir = path.dirname(pkgPath);
     // todo sideEffect
-    const pkg = {
+    const pkg: PackageData = {
         dir: pkgDir,
         data,
+        nodeResolvedImports: {},
+        setResolvedCache(key: string, entry: string) {
+            pkg.nodeResolvedImports[key] = entry;
+        },
+        getResolvedCache(key: string) {
+            return pkg.nodeResolvedImports[key];
+        },
     };
     // 缓存解析过的package.json
     packageCache?.set(pkgPath, pkg);

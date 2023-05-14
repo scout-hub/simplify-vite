@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-21 15:33:21
+ * @LastEditTime: 2023-05-14 21:50:56
  */
 import { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";
@@ -12,10 +12,7 @@ import path from "path";
 import resolve from "resolve";
 import fs from "fs-extra";
 // 用来开发打印 debug 日志的库
-import createDebug from "debug";
 import { normalizePath } from "../utils";
-
-const debug = createDebug("dev");
 
 export function preBundlePlugin(deps: Set<string>): Plugin {
     return {
@@ -72,7 +69,6 @@ export function preBundlePlugin(deps: Set<string>): Plugin {
                         }
                         proxyModule.push(`export * from "${entryPath}"`);
                     }
-                    debug("代理模块内容: %o", proxyModule.join("\n"));
                     const loader = path.extname(entryPath).slice(1);
                     return {
                         loader: loader as Loader,

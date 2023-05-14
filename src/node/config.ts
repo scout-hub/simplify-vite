@@ -4,12 +4,13 @@ import { build } from 'esbuild';
 import { DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
 import { isBuiltin, lookupFile } from "./utils";
 import { tryNodeResolve } from "./plugins/resolve";
+import { pathToFileURL } from "node:url";
 
 /*
  * @Author: Zhouqi
  * @Date: 2023-05-12 15:39:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-13 22:10:21
+ * @LastEditTime: 2023-05-14 22:24:32
  */
 export interface UserConfig {
     root?: string,
@@ -122,8 +123,11 @@ const bundleConfigFile = async (fileName: string, isESM: boolean) => {
                                 const isIdESM = isESM || kind === 'dynamic-import';
                                 // 根据id去找资源路径
                                 let idFsPath = tryNodeResolve(id, importer, { ...options }, false)?.id;
+                                if (idFsPath && isIdESM) {
+                                    idFsPath = pathToFileURL(idFsPath).href;
+                                }
                                 return {
-                                    path: id,
+                                    path: idFsPath,
                                     external: true,
                                 };
                             });
