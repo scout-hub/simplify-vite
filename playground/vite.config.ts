@@ -20,7 +20,6 @@ import { defineConfig, loadEnv } from 'simplify-vite';
 // import a from 'simplify-vite';
 // console.log(a);
 export default defineConfig({
-
 });
 // https://vitejs.dev/config/
 // export default defineConfig(({ mode }) => {

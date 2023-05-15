@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-20 11:34:13
+ * @LastEditTime: 2023-05-15 11:06:12
  */
 import type { Plugin } from "esbuild";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
@@ -28,6 +28,7 @@ export const scanPlugin = (deps: Set<string>): Plugin => {
                 },
                 (resolveInfo) => {
                     const { path: id } = resolveInfo;
+                    console.log(id);
                     // 推入 deps 集合中
                     deps.add(id);
                     return {

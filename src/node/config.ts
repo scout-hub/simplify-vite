@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import { build } from 'esbuild';
 import { DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
-import { isBuiltin, lookupFile } from "./utils";
+import { dynamicImport, isBuiltin, lookupFile, mergeConfig, normalizePath } from "./utils";
 import { tryNodeResolve } from "./plugins/resolve";
 import { pathToFileURL } from "node:url";
 
@@ -10,7 +10,7 @@ import { pathToFileURL } from "node:url";
  * @Author: Zhouqi
  * @Date: 2023-05-12 15:39:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-14 22:24:32
+ * @LastEditTime: 2023-05-15 13:53:25
  */
 export interface UserConfig {
     root?: string,
@@ -22,6 +22,17 @@ export interface InlineConfig extends UserConfig { }
 export interface ConfigEnv {
     command: 'build' | 'serve'
     mode: string
+}
+
+export type UserConfigFn = (env: ConfigEnv) => UserConfig | Promise<UserConfig>;
+export type UserConfigExport = UserConfig | Promise<UserConfig> | UserConfigFn;
+
+/**
+ * @author: Zhouqi
+ * @description: 定义用户端的配置
+ */
+export function defineConfig(config: UserConfigExport): UserConfigExport {
+    return config;
 }
 
 /**
@@ -40,7 +51,16 @@ export const resolveConfig = async (
         command
     };
     // 读取配置文件
-    const loadResult = await loadConfigFromFile(configEnv);
+    try {
+        const loadResult = await loadConfigFromFile(configEnv);
+        if (loadResult) {
+            // 合并vite默认配置和用户配置
+            const config = mergeConfig(loadResult.config, inlineConfig);
+            console.log(config);
+        }
+    } catch (error) {
+        throw error;
+    }
 }
 
 /**
@@ -71,7 +91,19 @@ const loadConfigFromFile = async (configEnv: ConfigEnv, configRoot = process.cwd
         const pkg = lookupFile(configRoot, ['package.json']);
         isESM = !!pkg && JSON.parse(pkg).type === 'module';
     } catch (error) { }
-    const bundled = await bundleConfigFile(resolvedPath, isESM)
+    // 通过esbuild构建vite config的产物
+    const bundled = await bundleConfigFile(resolvedPath, isESM);
+    // 通过esm或者cjs的模式加载配置文件
+    const userConfig = await loadConfigFromBundledFile(resolvedPath, bundled.code, isESM);
+    // vite config可以是一个函数，也可以是一个对象
+    const config = await (typeof userConfig === 'function'
+        ? userConfig(configEnv)
+        : userConfig);
+    return {
+        path: normalizePath(resolvedPath),
+        config,
+        dependencies: bundled.dependencies,
+    };
 }
 
 /**
@@ -153,5 +185,34 @@ const bundleConfigFile = async (fileName: string, isESM: boolean) => {
     return {
         code: text,
         dependencies: result.metafile ? Object.keys(result.metafile.inputs) : []
+    }
+};
+
+/**
+ * @author: Zhouqi
+ * @description: 通过esm或者cjs的模式加载配置文件 
+ */
+const loadConfigFromBundledFile = async (
+    fileName: string,
+    bundledCode: string,
+    isESM: boolean
+) => {
+    // 通过node --experimental-modules 可以支持原生ESM
+    // 将构建后的config文件写入磁盘并通过node原生ESM加载配置，然后删除文件
+    if (isESM) {
+        const fileBase = `${fileName}.timestamp-${Date.now()}`;
+        // .mjs结尾的文件说明是esm模式的
+        const fileNameTmp = `${fileBase}.mjs`;
+        const fileUrl = `${pathToFileURL(fileBase)}.mjs`;
+        // 将构建后的产物文件写到磁盘中
+        fs.writeFileSync(fileNameTmp, bundledCode);
+        try {
+            // 读取产物文件
+            return (await dynamicImport(fileUrl)).default;
+        }
+        finally {
+            // 删除产物文件
+            fs.unlinkSync(fileNameTmp);
+        }
     }
 };

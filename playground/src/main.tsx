@@ -2,13 +2,12 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-04-11 21:24:56
+ * @LastEditTime: 2023-05-15 11:15:57
  */
 import React from "react";
 import ReactDOM from "react-dom";
 // import App from "./App";
 import "./index.css";
-
 // @ts-ignore
 // import.meta.hot.accept(() => {
 //   ReactDOM.render(<App />, document.getElementById("root"));
