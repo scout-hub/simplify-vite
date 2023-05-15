@@ -2,10 +2,10 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 11:15:57
+ * @LastEditTime: 2023-05-15 15:14:14
  */
 import React from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 // import App from "./App";
 import "./index.css";
 // @ts-ignore
@@ -18,9 +18,13 @@ const App = () => <div>hello 123546123</div>;
 
 console.log(121356);
 
-ReactDOM.render(<App />, document.getElementById("root"));
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <App />
+);
 
 // @ts-ignore
 import.meta.hot.accept(() => {
-  ReactDOM.render(<App />, document.getElementById("root"));
+  ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+    <App />
+  );
 });
