@@ -10,7 +10,7 @@ import { pathToFileURL } from "node:url";
  * @Author: Zhouqi
  * @Date: 2023-05-12 15:39:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 13:53:25
+ * @LastEditTime: 2023-05-15 15:37:06
  */
 export interface UserConfig {
     root?: string,
@@ -44,23 +44,30 @@ export const resolveConfig = async (
     command: 'build' | 'serve',
     defaultMode = 'development'
 ) => {
+    let config = inlineConfig;
     // 获取构建模式，默认为development
-    const { mode = defaultMode } = inlineConfig;
+    let { mode = defaultMode } = inlineConfig;
     const configEnv: ConfigEnv = {
         mode,
         command
     };
     // 读取配置文件
-    try {
-        const loadResult = await loadConfigFromFile(configEnv);
-        if (loadResult) {
-            // 合并vite默认配置和用户配置
-            const config = mergeConfig(loadResult.config, inlineConfig);
-            console.log(config);
-        }
-    } catch (error) {
-        throw error;
+    const loadResult = await loadConfigFromFile(configEnv);
+    if (loadResult) {
+        // 合并vite默认配置和用户配置
+        const config = mergeConfig(loadResult.config, inlineConfig);
     }
+    // --mode优先级最高，其次是用户定义的mode
+    mode = inlineConfig.mode || config.mode || mode;
+    configEnv.mode = mode;
+    const resolvedRoot = normalizePath(config.root ? path.resolve(config.root) : process.cwd());
+    const resolved = {
+        ...config,
+        ... {
+            root: resolvedRoot,
+        }
+    };
+    return resolved;
 }
 
 /**

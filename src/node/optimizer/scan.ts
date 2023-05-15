@@ -2,12 +2,15 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 11:06:12
+ * @LastEditTime: 2023-05-15 15:16:17
  */
 import type { Plugin } from "esbuild";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 
-
+/**
+ * @author: Zhouqi
+ * @description: 预构建时扫描依赖
+ */
 export const scanPlugin = (deps: Set<string>): Plugin => {
     return {
         name: "esbuild:scan-deps",

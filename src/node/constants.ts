@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-13 21:34:07
+ * @LastEditTime: 2023-05-15 16:25:31
  */
 // 增加如下代码
 import path from "path";
@@ -61,3 +61,6 @@ export const DEFAULT_EXTENSIONS = [
     '.tsx',
     '.json',
 ]
+
+// 默认启动端口
+export const DEFAULT_DEV_PORT = 3000;

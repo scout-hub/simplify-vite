@@ -2,12 +2,12 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 11:04:44
+ * @LastEditTime: 2023-05-15 16:19:24
  */
 import path from "path";
 import { build } from "esbuild";
 import { green } from "picocolors";
-import { scanPlugin } from "./scanPlugin";
+import { scanPlugin } from "./scan";
 import { preBundlePlugin } from "./preBundlePlugin";
 import { PRE_BUNDLE_DIR } from "../constants";
 
@@ -39,3 +39,14 @@ export const optimize = async (root: string) => {
         plugins: [preBundlePlugin(deps)],
     });
 }
+
+/**
+ * @author: Zhouqi
+ * @description: 初始化依赖分析
+ */
+export const initDepsOptimizer = async (
+    config: Record<string, any>,
+    server?: Record<string, any>,
+) => {
+    console.log(1);
+};
