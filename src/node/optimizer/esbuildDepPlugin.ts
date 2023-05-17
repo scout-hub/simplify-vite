@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-14 21:50:56
+ * @LastEditTime: 2023-05-17 13:22:37
  */
 import { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";
@@ -13,6 +13,7 @@ import resolve from "resolve";
 import fs from "fs-extra";
 // 用来开发打印 debug 日志的库
 import { normalizePath } from "../utils";
+import { ResolvedConfig } from "../config";
 
 export function preBundlePlugin(deps: Set<string>): Plugin {
     return {
@@ -78,5 +79,27 @@ export function preBundlePlugin(deps: Set<string>): Plugin {
                 }
             );
         },
+    };
+}
+
+/**
+ * @author: Zhouqi
+ * @description: esbuild 预构建插件
+ */
+export function esbuildDepPlugin(
+    qualified: Record<string, string>,
+    // external: string[],
+    // config: ResolvedConfig,
+): Plugin {
+    return {
+        name: 'vite:dep-pre-bundle',
+        setup(build) {
+            build.onResolve(
+                { filter: /^[\w@][^:]/ },
+                async ({ path: id, importer, kind }: any) => {
+                    // console.log(id);
+                    return null;
+                })
+        }
     };
 }

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 13:52:15
+ * @LastEditTime: 2023-05-16 21:33:46
  */
 import os from "os";
 import path from "path";
@@ -50,15 +50,25 @@ export function isInternalRequest(url: string): boolean {
     return INTERNAL_LIST.includes(url);
 }
 
+interface LookupFileOptions {
+    pathOnly?: boolean
+}
+
 /**
  * @author: Zhouqi
  * @description: 文件查找
  */
-export const lookupFile = (dir: string, filenames: string[]): string | undefined => {
+export const lookupFile = (
+    dir: string,
+    filenames: string[],
+    options?: LookupFileOptions,
+): string | undefined => {
     for (const format of filenames) {
         const fullPath = path.join(dir, format)
         if (fs.existsSync(fullPath)) {
-            const result = fs.readFileSync(fullPath, 'utf-8');
+            const result = options?.pathOnly ?
+                fullPath :
+                fs.readFileSync(fullPath, 'utf-8');
             return result;
         }
     }
@@ -163,4 +173,36 @@ export const mergeConfigRecursively = (
         merged[key] = value;
     }
     return merged;
+}
+
+export const externalRE = /^(https?:)?\/\//;
+export const dataUrlRE = /^\s*data:/i
+export const bareImportRE = /^[\w@](?!.*:\/\/)/
+
+/**
+ * @author: Zhouqi
+ * @description: 删除文件以及目录
+ */
+export function emptyDir(dir: string): void {
+    for (const file of fs.readdirSync(dir)) {
+        // recursive：布尔值。是否递归删除目录
+        // force: 布尔值。如果路径不存在，则将忽略异常。
+        fs.rmSync(path.resolve(dir, file), { recursive: true, force: true })
+    }
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 写入文件
+ */
+export function writeFile(
+    filename: string,
+    content: string | Uint8Array,
+): void {
+    const dir = path.dirname(filename);
+    if (!fs.existsSync(dir)) {
+        // recursive: 布尔值。是否创建父目录
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filename, content);
 }

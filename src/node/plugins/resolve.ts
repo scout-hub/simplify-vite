@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-14 22:16:15
+ * @LastEditTime: 2023-05-17 13:22:00
  */
 import path from "path";
 import fs from 'fs';
@@ -12,10 +12,10 @@ import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
 import { pathExists } from "fs-extra";
 import { DEFAULT_EXTERSIONS } from "../constants";
-import { cleanUrl, normalizePath } from "../utils";
+import { bareImportRE, cleanUrl, normalizePath } from "../utils";
 import { PackageData, resolvePackageData } from "../packages";
 
-export function resolvePlugin(): Plugin {
+export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
     let serverContext: ServerContext;
     return {
         name: "m-vite:resolve",
@@ -24,6 +24,9 @@ export function resolvePlugin(): Plugin {
             serverContext = s;
         },
         async resolveId(id: string, importer?: string) {
+            const options = {
+                ...resolveOptions,
+            };
             // 1. 绝对路径
             if (path.isAbsolute(id)) {
                 // 本身就是绝对路径，直接返回
@@ -70,6 +73,13 @@ export function resolvePlugin(): Plugin {
                     }
                 }
             }
+            // 外部包的导入
+            if (bareImportRE.test(id)) {
+                let res;
+                if ((res = tryNodeResolve(id, importer, options, true))) {
+                    return res as any;
+                }
+            }
             return null;
         },
     };
@@ -86,7 +96,7 @@ export const tryNodeResolve = (
     targetWeb: boolean
 ) => {
     const { packageCache, preserveSymlinks } = options;
-    // 解析斜杠资源路径 ====>import xxx from 'a/b';
+    // 解析斜杠资源路径 ====> import xxx from 'a/b';
     let nestedPath = id;
     const possiblePkgIds = [];
     for (let prevSlashIndex = -1; ;) {
@@ -118,6 +128,7 @@ export const tryNodeResolve = (
     }
     // 获取包的根路径
     const rootPkgId = possiblePkgIds[0];
+    console.log(rootPkgId);
     const rootPkg = resolvePackageData(rootPkgId, basedir, preserveSymlinks, packageCache);
     let pkg: PackageData;
     let pkgId = '';

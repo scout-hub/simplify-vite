@@ -60,6 +60,9 @@ devDependencies:
   '@types/ws':
     specifier: ^8.5.4
     version: 8.5.4
+  fast-glob:
+    specifier: ^3.2.12
+    version: 3.2.12
   resolve.exports:
     specifier: ^2.0.0
     version: 2.0.0

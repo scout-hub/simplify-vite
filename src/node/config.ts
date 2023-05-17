@@ -1,3 +1,6 @@
+import type { OptimizeDeps } from './optimizer';
+import type { BuildOptions } from './build';
+import type { Plugin } from './plugin';
 import path from "path";
 import fs from "fs";
 import { build } from 'esbuild';
@@ -5,16 +8,32 @@ import { DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
 import { dynamicImport, isBuiltin, lookupFile, mergeConfig, normalizePath } from "./utils";
 import { tryNodeResolve } from "./plugins/resolve";
 import { pathToFileURL } from "node:url";
+import { resolveBuildOptions } from './build';
+import { resolvePlugins } from './plugins';
+import { PackageCache } from './packages';
 
-/*
- * @Author: Zhouqi
- * @Date: 2023-05-12 15:39:23
- * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 15:37:06
- */
+
+export type ResolvedConfig = Readonly<
+    Omit<UserConfig, 'plugins' | 'optimizeDeps'> & {
+        inlineConfig: InlineConfig
+        root: string
+        cacheDir: string
+        command: 'build' | 'serve'
+        mode: string
+        plugins: readonly Plugin[]
+        build: any
+        optimizeDeps: any
+        packageCache: PackageCache
+    }
+>
+
 export interface UserConfig {
-    root?: string,
+    root?: string
     mode?: string
+    optimizeDeps?: OptimizeDeps
+    build?: BuildOptions
+    plugins?: Plugin[]
+    cacheDir?: string
 }
 
 export interface InlineConfig extends UserConfig { }
@@ -43,7 +62,7 @@ export const resolveConfig = async (
     inlineConfig: InlineConfig,
     command: 'build' | 'serve',
     defaultMode = 'development'
-) => {
+): Promise<ResolvedConfig> => {
     let config = inlineConfig;
     // 获取构建模式，默认为development
     let { mode = defaultMode } = inlineConfig;
@@ -55,18 +74,47 @@ export const resolveConfig = async (
     const loadResult = await loadConfigFromFile(configEnv);
     if (loadResult) {
         // 合并vite默认配置和用户配置
-        const config = mergeConfig(loadResult.config, inlineConfig);
+        config = mergeConfig(loadResult.config, inlineConfig);
     }
     // --mode优先级最高，其次是用户定义的mode
     mode = inlineConfig.mode || config.mode || mode;
     configEnv.mode = mode;
     const resolvedRoot = normalizePath(config.root ? path.resolve(config.root) : process.cwd());
-    const resolved = {
-        ...config,
-        ... {
-            root: resolvedRoot,
+
+    // 获取vite config中的build配置
+    const resolvedBuildOptions = resolveBuildOptions(config.build);
+
+    // pathOnly = true，只返回文件路径，不读取内容
+    const pkgPath = lookupFile(resolvedRoot, [`package.json`], { pathOnly: true });
+    const cacheDir = normalizePath(
+        config.cacheDir ?
+            path.resolve(resolvedRoot, config.cacheDir) :
+            path.join(path.dirname(pkgPath || ''), `node_modules/.vite`)
+
+    );
+
+    const optimizeDeps = config.optimizeDeps || {};
+    const resolvedConfig: ResolvedConfig = {
+        root: resolvedRoot,
+        build: resolvedBuildOptions,
+        cacheDir,
+        mode,
+        inlineConfig,
+        command,
+        // todo 获取vite config配置用的用户定义的userPlugins
+        plugins: [],
+        packageCache: new Map(),
+        optimizeDeps: {
+            ...optimizeDeps
         }
+    }
+    const resolved: ResolvedConfig = {
+        ...config,
+        ...resolvedConfig
     };
+
+    // 解析vite config中的plugins并合并
+    (resolved.plugins as Plugin[]) = resolvePlugins(resolved);
     return resolved;
 }
 

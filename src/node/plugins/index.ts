@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:53:40
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-22 16:35:10
+ * @LastEditTime: 2023-05-16 17:05:38
  */
 import { Plugin } from "../plugin";
 import { esbuildTransformPlugin } from "./esbuild";
@@ -12,9 +12,18 @@ import { cssPlugin } from "./css";
 import { assetPlugin } from "./assets";
 import { clientInjectPlugin } from './clientInject';
 
-export function resolvePlugins(): Plugin[] {
+export function resolvePlugins(
+    config: Record<string, any>,
+): Plugin[] {
     return [
-        resolvePlugin(),
+        resolvePlugin({
+            ...config.resolve,
+            root: config.root,
+            isProduction: config.isProduction,
+            packageCache: config.packageCache,
+            ssrConfig: config.ssr,
+            asSrc: true,
+        }),
         esbuildTransformPlugin(),
         importAnalysisPlugin(),
         cssPlugin(),

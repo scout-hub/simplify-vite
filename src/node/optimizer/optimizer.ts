@@ -2,14 +2,16 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 16:19:24
+ * @LastEditTime: 2023-05-16 21:19:02
  */
 import path from "path";
 import { build } from "esbuild";
 import { green } from "picocolors";
-import { scanPlugin } from "./scan";
-import { preBundlePlugin } from "./preBundlePlugin";
+import { scanImports, scanPlugin } from "./scan";
+import { preBundlePlugin } from "./esbuildDepPlugin";
 import { PRE_BUNDLE_DIR } from "../constants";
+import { runOptimizeDeps } from '.'
+import { ResolvedConfig } from "../config";
 
 export const optimize = async (root: string) => {
     // 1. 这里暂定入口为src/main.tsx
@@ -45,8 +47,31 @@ export const optimize = async (root: string) => {
  * @description: 初始化依赖分析
  */
 export const initDepsOptimizer = async (
-    config: Record<string, any>,
+    config: ResolvedConfig,
     server?: Record<string, any>,
 ) => {
-    console.log(1);
+    createDepsOptimizer(config, server);
 };
+
+/**
+ * @author: Zhouqi
+ * @description: 创建预构建依赖分析
+ */
+const createDepsOptimizer = async (
+    config: ResolvedConfig,
+    server?: Record<string, any>,
+) => {
+    const deps = await discoverProjectDependencies(config);
+    const postScanOptimizationResult = runOptimizeDeps(config, deps);
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 查找预构建依赖
+ */
+const discoverProjectDependencies = async (config: Record<string, any>) => {
+    // 根据import进行依赖分析，找出需要预构建的资源
+    const { deps } = await scanImports(config);
+    return deps;
+}
+

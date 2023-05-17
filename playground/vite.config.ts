@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2022-11-21 15:51:34
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-13 21:12:49
+ * @LastEditTime: 2023-05-16 21:16:15
  */
 // import path from 'path';
 import { defineConfig, loadEnv } from 'simplify-vite';
@@ -20,6 +20,8 @@ import { defineConfig, loadEnv } from 'simplify-vite';
 // import a from 'simplify-vite';
 // console.log(a);
 export default defineConfig({
+    // 指定预构建输出目录位置
+    cacheDir: 'node_modules/.m-vite',
 });
 // https://vitejs.dev/config/
 // export default defineConfig(({ mode }) => {

@@ -2,10 +2,18 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-15 16:25:31
+ * @LastEditTime: 2023-05-16 21:36:20
  */
 // 增加如下代码
 import path from "path";
+
+export const ESBUILD_MODULES_TARGET = [
+    'es2020', // support import.meta.url
+    'edge88',
+    'firefox78',
+    'chrome87',
+    'safari14',
+]
 
 export const EXTERNAL_TYPES = [
     "css",
