@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 15:46:36
+ * @LastEditTime: 2023-05-17 16:24:04
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -46,7 +46,7 @@ export const runOptimizeDeps = async (
         flatIdDeps[flatId] = src;
     }
     plugins.push(esbuildDepPlugin(flatIdDeps, resolvedConfig));
-    const result = await build({
+    await build({
         entryPoints: Object.keys(flatIdDeps),
         bundle: true,
         format: 'esm',
@@ -56,7 +56,6 @@ export const runOptimizeDeps = async (
         outdir: processingCacheDir,
         plugins
     });
-    console.log(result);
 };
 
 // 获取预构建依赖打包后输出的文件目录

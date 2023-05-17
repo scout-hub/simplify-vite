@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 14:29:02
+ * @LastEditTime: 2023-05-17 16:48:11
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -13,7 +13,7 @@ import { blue, green } from "picocolors";
 import { initDepsOptimizer } from "../optimizer/optimizer";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import type { Plugin } from "../plugin";
-import { indexHtmlMiddware } from "./middlewares/indexHtml";
+import { createDevHtmlTransformFn, indexHtmlMiddware } from "./middlewares/indexHtml";
 import { transformMiddleware } from "./middlewares/transform";
 import { staticMiddleware } from "./middlewares/static";
 import { ModuleGraph } from "../ModuleGraph";
@@ -37,6 +37,8 @@ export interface ServerContext {
     listen: (port?: number, isRestart?: boolean) => Promise<ServerContext>;
     transformIndexHtml(
         url: string,
+        html: string,
+        originalUrl?: string,
     ): Promise<string>
 }
 
@@ -88,10 +90,10 @@ export const createServer = async (inlineConfig: InlineConfig = {}) => {
             console.log(`> 本地访问路径: ${blue("http://localhost:3000")}`);
             return serverContext;
         },
-        async transformIndexHtml() {
-            return '';
-        }
+        transformIndexHtml: null!
     };
+
+    serverContext.transformIndexHtml = createDevHtmlTransformFn(serverContext);
 
     bindingHMREvents(serverContext);
 

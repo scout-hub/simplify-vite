@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-22 16:47:31
+ * @LastEditTime: 2023-05-17 17:30:49
  */
 import { init, parse } from "es-module-lexer";
 import {
@@ -66,7 +66,7 @@ export function importAnalysisPlugin(): Plugin {
             for (const importInfo of imports) {
                 // 举例说明: const str = `import React from 'react'`
                 // str.slice(s, e) => 'react'
-                const { s: modStart, e: modEnd, n: modSource } = importInfo;
+                let { s: modStart, e: modEnd, n: modSource } = importInfo;
                 if (!modSource) continue;
                 // 静态资源
                 if (modSource.endsWith(".svg")) {
@@ -77,6 +77,11 @@ export function importAnalysisPlugin(): Plugin {
                 }
                 // 第三方库: 路径重写到预构建产物的路径
                 if (BARE_IMPORT_RE.test(modSource)) {
+                    // const [url, resolvedId] = await normalizeUrl(specifier, start);
+                    // todo 路径处理react-dom/client ===> react-dom_client
+                    if (modSource === 'react-dom/client') {
+                        modSource = 'react-dom_client';
+                    }
                     const bundlePath = normalizePath(
                         path.join('/', PRE_BUNDLE_DIR, `${modSource}.js`)
                     );
@@ -92,13 +97,13 @@ export function importAnalysisPlugin(): Plugin {
                 }
             }
             // 只对业务源码注入
-            if (!id.includes("node_modules")) {
-                // 注入 HMR 相关的工具函数
-                ms.prepend(
-                    `import { createHotContext as __vite__createHotContext } from "${CLIENT_PUBLIC_PATH}";
-                    import.meta.hot = __vite__createHotContext(${JSON.stringify(cleanUrl(curMod.url))});`
-                );
-            }
+            // if (!id.includes("node_modules")) {
+            //     // 注入 HMR 相关的工具函数
+            //     ms.prepend(
+            //         `import { createHotContext as __vite__createHotContext } from "${CLIENT_PUBLIC_PATH}";
+            //         import.meta.hot = __vite__createHotContext(${JSON.stringify(cleanUrl(curMod.url))});`
+            //     );
+            // }
             moduleGraph.updateModuleInfo(curMod, importedModules);
             return {
                 code: ms.toString(),
