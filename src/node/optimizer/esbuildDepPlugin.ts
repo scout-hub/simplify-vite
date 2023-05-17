@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 13:22:37
+ * @LastEditTime: 2023-05-17 15:42:45
  */
 import { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";
@@ -12,7 +12,7 @@ import path from "path";
 import resolve from "resolve";
 import fs from "fs-extra";
 // 用来开发打印 debug 日志的库
-import { normalizePath } from "../utils";
+import { flattenId, isExternalUrl, normalizePath } from "../utils";
 import { ResolvedConfig } from "../config";
 
 export function preBundlePlugin(deps: Set<string>): Plugin {
@@ -88,18 +88,59 @@ export function preBundlePlugin(deps: Set<string>): Plugin {
  */
 export function esbuildDepPlugin(
     qualified: Record<string, string>,
-    // external: string[],
-    // config: ResolvedConfig,
+    config: ResolvedConfig,
 ): Plugin {
+    const _resolve = config.createResolver();
+    const _resolveRequire = config.createResolver({
+        isRequire: true
+    });
+    const resolve = (
+        id: string,
+        importer: string,
+        kind: string,
+    ) => {
+        let _importer;
+        _importer = importer in qualified ? qualified[importer] : importer;
+        const resolver = kind.startsWith('require') ? _resolveRequire : _resolve;
+        return resolver(id, _importer);
+    };
+
+    const resolveResult = (id: string, resolved: string) => {
+        if (isExternalUrl(resolved)) {
+            return {
+                path: resolved,
+                external: true,
+            }
+        }
+        return {
+            path: path.resolve(resolved),
+        }
+    }
+
     return {
         name: 'vite:dep-pre-bundle',
         setup(build) {
             build.onResolve(
                 { filter: /^[\w@][^:]/ },
                 async ({ path: id, importer, kind }: any) => {
-                    // console.log(id);
-                    return null;
+                    let entry;
+                    if (!importer) {
+                        if ((entry = resolveEntry(id))) return entry;
+                    }
+                    const resolved = await resolve(id, importer, kind);
+                    if (resolved) {
+                        return resolveResult(id, resolved);
+                    }
                 })
+            const resolveEntry = (id: string) => {
+                const flatId = flattenId(id);
+                if (flatId in qualified) {
+                    // 获取id对应的资源路径
+                    return {
+                        path: qualified[flatId],
+                    }
+                }
+            }
         }
     };
 }

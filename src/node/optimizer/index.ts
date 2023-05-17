@@ -2,12 +2,12 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 13:22:34
+ * @LastEditTime: 2023-05-17 15:46:36
  */
 import path from "node:path";
 import fs from "node:fs";
 import { ResolvedConfig } from "../config";
-import { emptyDir, normalizePath, writeFile } from "../utils";
+import { emptyDir, flattenId, normalizePath, writeFile } from "../utils";
 import { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
 import { esbuildDepPlugin } from "./esbuildDepPlugin";
@@ -35,13 +35,19 @@ export const runOptimizeDeps = async (
     fs.existsSync(processingCacheDir) ?
         emptyDir(processingCacheDir) :
         fs.mkdirSync(processingCacheDir, { recursive: true });
+
     // 缓存目录中的所有文件都应被识别为 ES 模块
     writeFile(path.resolve(processingCacheDir, 'package.json'), JSON.stringify({ type: 'module' }));
-    const flatIdDeps = Object.keys(depsInfo);
-    const plugins = []
-    plugins.push(esbuildDepPlugin(depsInfo));
+    const flatIdDeps: Record<string, string> = {};
+    const plugins = [];
+    for (const id in depsInfo) {
+        const src = depsInfo[id];
+        const flatId = flattenId(id);
+        flatIdDeps[flatId] = src;
+    }
+    plugins.push(esbuildDepPlugin(flatIdDeps, resolvedConfig));
     const result = await build({
-        entryPoints: flatIdDeps,
+        entryPoints: Object.keys(flatIdDeps),
         bundle: true,
         format: 'esm',
         // build的时候会从config.build.target中获取，dev模式下用vite内部定义的值
@@ -50,7 +56,7 @@ export const runOptimizeDeps = async (
         outdir: processingCacheDir,
         plugins
     });
-    // console.log(depsInfo);
+    console.log(result);
 };
 
 // 获取预构建依赖打包后输出的文件目录

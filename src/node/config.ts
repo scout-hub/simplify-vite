@@ -6,12 +6,17 @@ import fs from "fs";
 import { build } from 'esbuild';
 import { DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
 import { dynamicImport, isBuiltin, lookupFile, mergeConfig, normalizePath } from "./utils";
-import { tryNodeResolve } from "./plugins/resolve";
+import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 import { pathToFileURL } from "node:url";
 import { resolveBuildOptions } from './build';
 import { resolvePlugins } from './plugins';
 import { PackageCache } from './packages';
+import { PluginContainer, createPluginContainer } from './pluginContainer';
 
+export type ResolveFn = (
+    id: string,
+    importer?: string,
+) => Promise<string | undefined>
 
 export type ResolvedConfig = Readonly<
     Omit<UserConfig, 'plugins' | 'optimizeDeps'> & {
@@ -23,7 +28,8 @@ export type ResolvedConfig = Readonly<
         plugins: readonly Plugin[]
         build: any
         optimizeDeps: any
-        packageCache: PackageCache
+        packageCache: PackageCache,
+        createResolver: (options?: Record<string, any>) => ResolveFn
     }
 >
 
@@ -90,8 +96,27 @@ export const resolveConfig = async (
         config.cacheDir ?
             path.resolve(resolvedRoot, config.cacheDir) :
             path.join(path.dirname(pkgPath || ''), `node_modules/.vite`)
-
     );
+
+    //创建一个用于特殊场景的内部解析器，例如优化器和处理 css @imports
+    const createResolver = (options: any) => {
+        let resolverContainer: PluginContainer | undefined;
+        return async (id: string, importer: string | undefined) => {
+            const container =
+                resolverContainer ||
+                (resolverContainer = await createPluginContainer({
+                    ...resolved,
+                    plugins: [
+                        resolvePlugin({
+                            root: resolvedRoot,
+                            asSrc: true,
+                            ...options,
+                        }),
+                    ],
+                }));
+            return (await container.resolveId(id, importer))?.id
+        }
+    };
 
     const optimizeDeps = config.optimizeDeps || {};
     const resolvedConfig: ResolvedConfig = {
@@ -104,6 +129,7 @@ export const resolveConfig = async (
         // todo 获取vite config配置用的用户定义的userPlugins
         plugins: [],
         packageCache: new Map(),
+        createResolver,
         optimizeDeps: {
             ...optimizeDeps
         }

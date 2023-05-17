@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-16 21:33:46
+ * @LastEditTime: 2023-05-17 14:42:52
  */
 import os from "os";
 import path from "path";
@@ -206,3 +206,11 @@ export function writeFile(
     }
     fs.writeFileSync(filename, content);
 }
+
+export const flattenId = (id: string): string =>
+    id
+        .replace(/[/:]/g, '_')
+        .replace(/\./g, '__')
+        .replace(/(\s*>\s*)/g, '___')
+
+export const isExternalUrl = (url: string): boolean => externalRE.test(url)

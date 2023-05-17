@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 13:22:00
+ * @LastEditTime: 2023-05-17 15:41:08
  */
 import path from "path";
 import fs from 'fs';
@@ -126,25 +126,78 @@ export const tryNodeResolve = (
         fs.existsSync(cleanUrl(importer))) {
         basedir = path.dirname(importer);
     }
+    // 最近的有package.json的包
+    let nearestPkg;
     // 获取包的根路径
     const rootPkgId = possiblePkgIds[0];
-    console.log(rootPkgId);
     const rootPkg = resolvePackageData(rootPkgId, basedir, preserveSymlinks, packageCache);
-    let pkg: PackageData;
-    let pkgId = '';
+    const nearestPkgId = [...possiblePkgIds].reverse().find((pkgId) => {
+        nearestPkg = resolvePackageData(pkgId, basedir, preserveSymlinks, packageCache)!;
+        return nearestPkg;
+    })!;
+    let pkg: PackageData | undefined;
+    let pkgId: string | undefined;
     // 如果package.json中存在的export，则将包ID指定为rootPkgId，后面需要根据export查找如何文件
     if (rootPkg?.data?.exports) {
         pkgId = rootPkgId;
         pkg = rootPkg;
+    } else {
+        // 比如react的scheduler包
+        pkgId = nearestPkgId;
+        pkg = nearestPkg;
+    }
+    if (!pkg || !nearestPkg) {
+        console.error(`[vite] failed to resolve ${id} from ${importer || process.cwd()}`);
+        return;
     }
     let resolveId = resolvePackageEntry;
     let unresolvedId = pkgId;
-    let resolved;
-    resolved = resolveId(unresolvedId, pkg!, targetWeb, options);
+    // 深度导入，即不是根包的导入
+    const isDeepImport = unresolvedId !== nestedPath;
+    if (isDeepImport) {
+        resolveId = resolveDeepImport;
+        unresolvedId = '.' + nestedPath.slice(pkgId.length);
+    }
+    let resolved: string | undefined;
+    resolved = resolveId(unresolvedId, pkg, targetWeb, options);
     // TODO 解决构建的包副作用，以便 rollup 可以更好地执行 tree-shaking
     return {
         id: resolved
     };
+};
+
+/**
+ * @author: Zhouqi
+ * @description: 解析深度导入
+ */
+const resolveDeepImport = (
+    id: string,
+    {
+        setResolvedCache,
+        getResolvedCache,
+        dir,
+        data,
+    }: PackageData,
+    targetWeb: boolean,
+    options: Record<string, any>
+): string | undefined => {
+    const cache = getResolvedCache(id);
+    // 有缓存则直接返回
+    if (cache) return cache;
+    let relativeId = id;
+    const { exports: exportsField } = data;
+    if (exportsField) {
+        const exportsId = resolveExports(data, id, options, targetWeb);
+        exportsId && (relativeId = exportsId);
+    }
+    if (relativeId) {
+        const resolved = tryFsResolve(path.join(dir, relativeId), options);
+        if (resolved) {
+            // 缓存解析结果
+            setResolvedCache(id, resolved);
+            return resolved;
+        }
+    }
 };
 
 /**
@@ -197,7 +250,7 @@ const resolveExports = (
     return result ? result[0] : undefined;
 }
 
-const tryFsResolve = (fsPath: string, options: any, tryIndex = true, targetWeb = true) => {
+const tryFsResolve = (fsPath: string, options: any) => {
     let res;
     if ((res = tryResolveFile(fsPath, '', options))) {
         return res;

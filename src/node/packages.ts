@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-13 21:50:36
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-14 22:15:38
+ * @LastEditTime: 2023-05-17 15:40:58
  */
 import fs from 'fs';
 import path from 'path';
@@ -39,13 +39,24 @@ export function resolvePackageData(
     packageCache?: PackageCache
 ) {
     let pkg;
+    let cacheKey: string | undefined;
+    if (packageCache) {
+        cacheKey = `${id}&${basedir}&${preserveSymlinks}`
+        if ((pkg = packageCache.get(cacheKey))) {
+            return pkg
+        }
+    }
     let pkgPath;
-    // 获取对应包的package.json软链路径
-    pkgPath = resolveFrom(`${id}/package.json`, basedir, preserveSymlinks);
-    // 获取对应package.json的内容
-    pkg = loadPackageData(pkgPath, true, packageCache);
-    packageCache?.set(pkgPath, pkg);
-    return pkg;
+    // 加上try catch，因为可能读不到对应的package.json，比如react-dom
+    try {
+        // 获取对应包的package.json软链路径
+        pkgPath = resolveFrom(`${id}/package.json`, basedir, preserveSymlinks);
+        // 获取对应package.json的内容
+        pkg = loadPackageData(pkgPath, true, packageCache);
+        packageCache?.set(cacheKey!, pkg);
+        return pkg;
+    } catch (error) { }
+    return null;
 }
 
 /**
