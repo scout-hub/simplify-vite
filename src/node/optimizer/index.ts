@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 16:24:04
+ * @LastEditTime: 2023-05-22 14:41:41
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -14,6 +14,54 @@ import { esbuildDepPlugin } from "./esbuildDepPlugin";
 
 export type OptimizeDeps = {
     entries: string[];
+}
+
+export interface OptimizedDepInfo {
+    id: string
+    file: string
+    src?: string
+    needsInterop?: boolean
+    browserHash?: string
+    fileHash?: string
+    /**
+     * 在优化过程中，ids 仍然可以解析到它们的最终位置，但是 bundle 可能还没有保存到磁盘
+     */
+    processing?: Promise<void>
+    /**
+     * ExportData 缓存，发现 deps 将解析 src 条目以获取导出数据，用于定义是否需要互操作以及何时进行预捆绑
+     */
+    exportsData?: Promise<Record<string, any>>
+}
+
+export interface DepOptimizationMetadata {
+    /**
+     * 主哈希值由用户配置和依赖锁文件决定。这会在服务器启动时进行检查，以避免不必要的重新捆绑。
+     */
+    // hash: string
+    /**
+     * 浏览器哈希由主哈希加上运行时发现的附加依赖项决定。这用于使浏览器对优化的 deps 的请求无效
+     */
+    // browserHash: string
+    /**
+     * Metadata for each already optimized dependency
+     */
+    optimized: Record<string, OptimizedDepInfo>
+    /**
+     * Metadata for non-entry optimized chunks and dynamic imports
+     */
+    chunks: Record<string, OptimizedDepInfo>
+    /**
+     * Metadata for each newly discovered dependency after processing
+     */
+    discovered: Record<string, OptimizedDepInfo>
+    /**
+     * OptimizedDepInfo list
+     */
+    depInfoList: OptimizedDepInfo[]
+}
+
+export interface DepsOptimizer {
+    metadata: DepOptimizationMetadata
 }
 
 /**
@@ -58,6 +106,25 @@ export const runOptimizeDeps = async (
     });
 };
 
+/**
+ * @author: Zhouqi
+ * @description: 初始化预构建依赖元信息
+ */
+export const initDepsOptimizerMetadata = (
+    config: ResolvedConfig,
+    timestamp?: string,
+): DepOptimizationMetadata => {
+    // const hash = getDepHash(config)
+    return {
+        // hash,
+        // browserHash: getOptimizedBrowserHash(hash, {}, timestamp),
+        optimized: {},
+        chunks: {},
+        discovered: {},
+        depInfoList: [],
+    }
+};
+
 // 获取预构建依赖打包后输出的文件目录
 export function getDepsCacheDir(config: ResolvedConfig): string {
     return getDepsCacheDirPrefix(config) + getDepsCacheSuffix(config);
@@ -86,4 +153,37 @@ const getDepsCacheSuffix = (config: ResolvedConfig): string => {
  */
 const getProcessingDepsCacheDir = (config: ResolvedConfig) => {
     return (getDepsCacheDirPrefix(config) + getDepsCacheSuffix(config) + '_temp');
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 获取预构建产物的路径
+ */
+export const getOptimizedDepPath = (
+    id: string,
+    config: ResolvedConfig,
+): string => normalizePath(
+    path.resolve(getDepsCacheDir(config), flattenId(id) + '.js'),
+);
+
+/**
+ * @author: Zhouqi
+ * @description: 提导出的数据
+ */
+export async function extractExportsData(resolved: string, config: ResolvedConfig) {
+    const exportsData = {};
+    return exportsData;
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 添加优化依赖信息
+ */
+export const addOptimizedDepInfo = (
+    metadata: DepOptimizationMetadata,
+    type: 'optimized' | 'discovered' | 'chunks',
+    depInfo: OptimizedDepInfo) => {
+    metadata[type][depInfo.id] = depInfo;
+    metadata.depInfoList.push(depInfo);
+    return depInfo;
 }

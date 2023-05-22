@@ -2,45 +2,27 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-16 21:19:02
+ * @LastEditTime: 2023-05-22 14:45:13
  */
-import path from "path";
-import { build } from "esbuild";
-import { green } from "picocolors";
+import path from "node:path";
+import fs from "node:fs"
+// import { build } from "esbuild";
+// import { green } from "picocolors";
 import { scanImports, scanPlugin } from "./scan";
-import { preBundlePlugin } from "./esbuildDepPlugin";
-import { PRE_BUNDLE_DIR } from "../constants";
-import { runOptimizeDeps } from '.'
+// import { preBundlePlugin } from "./esbuildDepPlugin";
+// import { PRE_BUNDLE_DIR } from "../constants";
+import {
+    DepOptimizationMetadata,
+    getDepsCacheDir,
+    initDepsOptimizerMetadata,
+    runOptimizeDeps,
+    getOptimizedDepPath,
+    addOptimizedDepInfo,
+    extractExportsData,
+    DepsOptimizer
+} from '.'
 import { ResolvedConfig } from "../config";
-
-export const optimize = async (root: string) => {
-    // 1. 这里暂定入口为src/main.tsx
-    const entry = path.resolve(root, "src/main.tsx");
-    // 2. 从入口处扫描依赖，获取需要与构建的依赖
-    const deps = new Set<string>();
-    await build({
-        entryPoints: [entry],
-        bundle: true,
-        write: false,
-        plugins: [scanPlugin(deps)],
-    });
-    console.log(
-        `${green("需要预构建的依赖")}:\n${[...deps]
-            .map(green)
-            .map((item) => `  ${item}`)
-            .join("\n")}`
-    );
-    // 3. 预构建依赖
-    await build({
-        entryPoints: [...deps],
-        write: true,
-        bundle: true,
-        format: "esm",
-        splitting: true,
-        outdir: path.resolve(root, PRE_BUNDLE_DIR),
-        plugins: [preBundlePlugin(deps)],
-    });
-}
+import { emptyDir } from "../utils";
 
 /**
  * @author: Zhouqi
@@ -53,6 +35,8 @@ export const initDepsOptimizer = async (
     createDepsOptimizer(config, server);
 };
 
+const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
+
 /**
  * @author: Zhouqi
  * @description: 创建预构建依赖分析
@@ -61,8 +45,38 @@ const createDepsOptimizer = async (
     config: ResolvedConfig,
     server?: Record<string, any>,
 ) => {
-    const deps = await discoverProjectDependencies(config);
-    const postScanOptimizationResult = runOptimizeDeps(config, deps);
+    // 读取缓存的metadata json文件
+    const cachedMetadata = loadCachedDepOptimizationMetadata(config);
+    // 创建metadata对象，缓存预构建依赖的信息
+    let metadata = cachedMetadata || initDepsOptimizerMetadata(config);
+    const depsOptimizer = {
+        metadata
+    };
+
+    // 将预构建依赖分析对象存入map中
+    depsOptimizerMap.set(config, depsOptimizer);
+
+    // 是否是第一次预构建，不存在缓存的metadata
+    if (!cachedMetadata) {
+        // todo 开发模式下才需要扫描依赖
+        const deps = await discoverProjectDependencies(config);
+        for (const id of Object.keys(deps)) {
+            if (!metadata.discovered[id]) {
+                addMissingDep(id, deps[id]);
+            }
+        }
+        const postScanOptimizationResult = runOptimizeDeps(config, deps);
+    }
+
+    // 添加缺失的依赖信息
+    function addMissingDep(id: string, resolved: string) {
+        return addOptimizedDepInfo(metadata, 'discovered', {
+            id,
+            file: getOptimizedDepPath(id, config),
+            src: resolved,
+            exportsData: extractExportsData(resolved, config),
+        });
+    }
 }
 
 /**
@@ -74,4 +88,28 @@ const discoverProjectDependencies = async (config: Record<string, any>) => {
     const { deps } = await scanImports(config);
     return deps;
 }
+
+/**
+ * @author: Zhouqi
+ * @description: 获取缓存的预构建依赖信息
+ */
+const loadCachedDepOptimizationMetadata = (config: ResolvedConfig): DepOptimizationMetadata | undefined => {
+    // 缓存目录存在则清空
+    if (fs.existsSync(path.join(config.cacheDir, '_metadata.json'))) {
+        emptyDir(config.cacheDir);
+    }
+    // 获取缓存目录
+    const depsCacheDir = getDepsCacheDir(config);
+    let cachedMetadata;
+    try {
+        // 定义缓存地址
+        const cachedMetadataPath = path.join(depsCacheDir, '_metadata.json');
+        const metaData = fs.readFileSync(cachedMetadataPath, 'utf-8');
+        // cachedMetadata = parseDepsOptimizerMetadata(fs.readFileSync(cachedMetadataPath, 'utf-8'), depsCacheDir);
+    }
+    catch (e) {
+        // 没有获取到缓存的metadata
+    }
+    return cachedMetadata;
+};
 
