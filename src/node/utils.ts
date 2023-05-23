@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 13:19:20
+ * @LastEditTime: 2023-05-23 14:45:41
  */
 import os from "os";
 import path from "path";
@@ -224,4 +224,11 @@ export function transformStableResult(
     return {
         code: s.toString()
     }
+}
+
+export const renameDir = fs.renameSync;
+export const removeDir = (dir: string) => {
+    // 删除 .vite/deps 时，如果不存在，nodejs 可能还会删除 .vite/ 中的其他目录，包括 .vite/deps_temp （错误）。
+    // 通过在暂时删除之前检查目录是否存在来解决问题
+    fs.existsSync(dir) && fs.rmSync(dir, { recursive: true, force: true })
 }

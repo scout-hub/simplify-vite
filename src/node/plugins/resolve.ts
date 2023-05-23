@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 11:42:17
+ * @LastEditTime: 2023-05-23 16:38:49
  */
 import path from "path";
 import fs from 'fs';
@@ -22,6 +22,7 @@ export interface ResolveOptions {
 
 export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
     let serverContext: ServerContext;
+    const { root } = resolveOptions;
     return {
         name: "m-vite:resolve",
         configureServer(s) {
@@ -34,6 +35,11 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                 scan: resolveOpts?.scan ?? resolveOptions.scan,
             };
             const depsOptimizer = resolveOptions.getDepsOptimizer?.();
+
+            // 预构建依赖的特殊处理
+            if (depsOptimizer?.isOptimizedDepUrl(id)) {
+                return normalizePath(path.resolve(root, id.slice(1)));;
+            }
             // 1. 绝对路径
             if (path.isAbsolute(id)) {
                 // 本身就是绝对路径，直接返回

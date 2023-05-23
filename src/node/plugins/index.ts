@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:53:40
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 11:14:47
+ * @LastEditTime: 2023-05-23 16:36:41
  */
 import { Plugin } from "../plugin";
 import { esbuildTransformPlugin } from "./esbuild";
@@ -19,6 +19,7 @@ export function resolvePlugins(
 ): Plugin[] {
     return [
         resolvePlugin({
+            root: config.root,
             ...config.resolve,
             getDepsOptimizer: () => getDepsOptimizer(config),
         }),

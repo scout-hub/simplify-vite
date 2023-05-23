@@ -20,7 +20,7 @@ import { ModuleGraph } from "../ModuleGraph";
 import chokidar, { FSWatcher } from "chokidar";
 import { createWebSocketServer } from "../ws";
 import { bindingHMREvents } from "../hmr";
-import type { InlineConfig } from "../config";
+import type { InlineConfig, ResolvedConfig } from "../config";
 import { resolveConfig } from "../config";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { DEFAULT_DEV_PORT } from "../constants";
@@ -32,7 +32,7 @@ export interface ServerContext {
     ws: { send: (data: any) => void; close: () => void };
     watcher: FSWatcher;
     httpServer: http.Server;
-    config: Record<string, any>;
+    config: ResolvedConfig;
     plugins?: Plugin[];
     listen: (port?: number, isRestart?: boolean) => Promise<ServerContext>;
     transformIndexHtml(
@@ -48,7 +48,7 @@ export interface ServerContext {
  */
 export const createServer = async (inlineConfig: InlineConfig = {}) => {
     // 解析默认配置
-    const config = await resolveConfig(inlineConfig, 'serve');
+    const config: ResolvedConfig = await resolveConfig(inlineConfig, 'serve');
     const { root, plugins } = config;
     const startTime = Date.now();
     const app = connect() as any;

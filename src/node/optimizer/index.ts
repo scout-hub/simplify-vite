@@ -2,12 +2,19 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 15:32:44
+ * @LastEditTime: 2023-05-23 17:50:38
  */
 import path from "node:path";
 import fs from "node:fs";
 import { ResolvedConfig } from "../config";
-import { emptyDir, flattenId, normalizePath, writeFile } from "../utils";
+import {
+    emptyDir,
+    flattenId,
+    normalizePath,
+    removeDir,
+    renameDir,
+    writeFile,
+} from "../utils";
 import { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
 import { esbuildDepPlugin } from "./esbuildDepPlugin";
@@ -62,7 +69,8 @@ export interface DepOptimizationMetadata {
 
 export interface DepsOptimizer {
     metadata: DepOptimizationMetadata,
-    getOptimizedDepId: (depInfo: OptimizedDepInfo) => string
+    getOptimizedDepId: (depInfo: OptimizedDepInfo) => string,
+    delayDepsOptimizerUntil: (id: string, done: () => Promise<any>) => void
 }
 
 /**
@@ -73,6 +81,9 @@ export const runOptimizeDeps = async (
     resolvedConfig: ResolvedConfig,
     depsInfo: Record<string, any>,
 ) => {
+    const config: ResolvedConfig = {
+        ...resolvedConfig,
+    }
     // 获取预构建依赖需要输出的目录
     const depsCacheDir = getDepsCacheDir(resolvedConfig);
     // 获取运行时的预构建依赖输出目录
@@ -87,6 +98,22 @@ export const runOptimizeDeps = async (
 
     // 缓存目录中的所有文件都应被识别为 ES 模块
     writeFile(path.resolve(processingCacheDir, 'package.json'), JSON.stringify({ type: 'module' }));
+
+    const metadata = initDepsOptimizerMetadata(config);
+
+    const processingResult = {
+        metadata,
+        async commit() {
+            // 写入元数据文件，删除 `deps` 文件夹并将 `processing` 文件夹重命名为 `deps` 处理完成，
+            // 我们现在可以用 depsCacheDir 替换 processingCacheDir 将文件路径从临时处理目录重新连接到最终的 deps 缓存目录
+            await removeDir(depsCacheDir);
+            await renameDir(processingCacheDir, depsCacheDir);
+        },
+        cancel() {
+            fs.rmSync(processingCacheDir, { recursive: true, force: true })
+        }
+    };
+
     const flatIdDeps: Record<string, string> = {};
     const plugins = [];
     for (const id in depsInfo) {
@@ -105,6 +132,7 @@ export const runOptimizeDeps = async (
         outdir: processingCacheDir,
         plugins
     });
+    return processingResult;
 };
 
 /**
@@ -197,4 +225,28 @@ export const optimizedDepInfoFromId = (
     metadata: DepOptimizationMetadata,
     id: string,
 ): OptimizedDepInfo | undefined => metadata.optimized[id] || metadata.discovered[id] || metadata.chunks[id]
+
+/**
+ * @author: Zhouqi
+ * @description: 是否为预构建优化依赖文件
+ */
+export const isOptimizedDepFile = (
+    id: string,
+    config: ResolvedConfig,
+): boolean => {
+    // console.log(id, getDepsCacheDirPrefix(config));
+    return id.startsWith(getDepsCacheDirPrefix(config));
+}
+
+export const createIsOptimizedDepUrl = (
+    config: ResolvedConfig,
+): (url: string) => boolean => {
+    const { root } = config
+    const depsCacheDir = getDepsCacheDirPrefix(config)
+    const depsCacheDirRelative = normalizePath(path.relative(root, depsCacheDir))
+    const depsCacheDirPrefix = `/${depsCacheDirRelative}`;
+    return function isOptimizedDepUrl(url: string): boolean {
+        return url.startsWith(depsCacheDirPrefix)
+    }
+}
 
