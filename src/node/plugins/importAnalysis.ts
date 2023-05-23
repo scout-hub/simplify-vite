@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 17:30:49
+ * @LastEditTime: 2023-05-23 13:21:59
  */
 import { init, parse } from "es-module-lexer";
 import {
@@ -16,7 +16,8 @@ import {
     isJSRequest,
     normalizePath,
     getShortName,
-    isInternalRequest
+    isInternalRequest,
+    transformStableResult
 } from "../utils";
 // magic-string 用来作字符串编辑
 import MagicString from "magic-string";
@@ -25,75 +26,70 @@ import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
 import { pathExists } from "fs-extra";
 import resolve from "resolve";
+import { ResolvedConfig } from "../config";
 
-export function importAnalysisPlugin(): Plugin {
+export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
     let serverContext: ServerContext;
+    const { root } = config;
     return {
         name: "m-vite:import-analysis",
         configureServer(s) {
             // 保存服务端上下文
             serverContext = s;
         },
-        async transform(code: string, id: string) {
+        async transform(code: string, importer: string) {
             // 只处理 JS 相关的请求
-            if (!isJSRequest(id) || isInternalRequest(id)) {
+            if (!isJSRequest(importer) || isInternalRequest(importer)) {
                 return null;
             }
             await init;
             // 解析 import 语句
             const [imports] = parse(code);
             const ms = new MagicString(code);
-            const resolve = async (id: string, importer?: string) => {
-                const resolved = await this.resolve!(
-                    id,
-                    normalizePath(importer!)
-                );
-                if (!resolved) {
-                    return;
+            let s: MagicString | undefined;
+            const str = () => s || (s = new MagicString(code));
+            const normalizeUrl = async (url: string, pos: number) => {
+                const resolved = await this.resolve!(url, importer);
+                if (!resolved) console.error('error');
+                const id = resolved.id;
+                if (id.startsWith(root + '/')) {
+                    url = id.slice(root.length);
                 }
-                const cleanedId = cleanUrl(resolved.id);
-                const mod = moduleGraph.getModuleById(cleanedId);
-                let resolvedId = `/${getShortName(resolved.id, serverContext.root)}`;
-                if (mod && mod.lastHMRTimestamp > 0) {
-                    resolvedId += "?t=" + mod.lastHMRTimestamp;
-                }
-                return resolvedId;
+                return [url, id];
             };
             const { moduleGraph } = serverContext;
-            const curMod = moduleGraph.getModuleById(id)!;
+            const curMod = moduleGraph.getModuleById(importer)!;
             const importedModules = new Set<string>();
             // 对每一个 import 语句依次进行分析
             for (const importInfo of imports) {
-                // 举例说明: const str = `import React from 'react'`
-                // str.slice(s, e) => 'react'
-                let { s: modStart, e: modEnd, n: modSource } = importInfo;
-                if (!modSource) continue;
+                let rewriteDone = false;
+                let { s: modStart, e: modEnd, n: specifier } = importInfo;
+                if (!specifier) continue;
+                const [url, resolvedId] = await normalizeUrl(specifier, modStart);
                 // 静态资源
-                if (modSource.endsWith(".svg")) {
+                if (specifier.endsWith(".svg")) {
                     // 加上 ?import 后缀
-                    const resolvedUrl = path.join(path.dirname(id), modSource);
+                    const resolvedUrl = path.join(path.dirname(importer), specifier);
                     ms.overwrite(modStart, modEnd, `${resolvedUrl}?import`);
                     continue;
                 }
                 // 第三方库: 路径重写到预构建产物的路径
-                if (BARE_IMPORT_RE.test(modSource)) {
-                    // const [url, resolvedId] = await normalizeUrl(specifier, start);
-                    // todo 路径处理react-dom/client ===> react-dom_client
-                    if (modSource === 'react-dom/client') {
-                        modSource = 'react-dom_client';
-                    }
-                    const bundlePath = normalizePath(
-                        path.join('/', PRE_BUNDLE_DIR, `${modSource}.js`)
-                    );
-                    ms.overwrite(modStart, modEnd, bundlePath);
-                    importedModules.add(bundlePath);
-                } else if (modSource.startsWith(".") || modSource.startsWith("/")) {
-                    // 直接调用插件上下文的 resolve 方法，会自动经过路径解析插件的处理
-                    const resolved = await resolve!(modSource, id);
-                    if (resolved) {
-                        ms.overwrite(modStart, modEnd, resolved);
-                        importedModules.add(resolved);
-                    }
+                if (BARE_IMPORT_RE.test(specifier)) {
+                    ms.overwrite(modStart, modEnd, url);
+                    importedModules.add(url);
+                }
+                // else if (specifier.startsWith(".") || specifier.startsWith("/")) {
+                //     // 直接调用插件上下文的 resolve 方法，会自动经过路径解析插件的处理
+                //     const resolved = await resolve!(specifier, importer);
+                //     if (resolved) {
+                //         ms.overwrite(modStart, modEnd, resolved);
+                //         importedModules.add(resolved);
+                //     }
+                // }
+                if (!rewriteDone) {
+                    str().overwrite(modStart, modEnd, url, {
+                        contentOnly: true,
+                    });
                 }
             }
             // 只对业务源码注入
@@ -104,7 +100,7 @@ export function importAnalysisPlugin(): Plugin {
             //         import.meta.hot = __vite__createHotContext(${JSON.stringify(cleanUrl(curMod.url))});`
             //     );
             // }
-            moduleGraph.updateModuleInfo(curMod, importedModules);
+            if (s) return transformStableResult(s);
             return {
                 code: ms.toString(),
                 // 生成 SourceMap

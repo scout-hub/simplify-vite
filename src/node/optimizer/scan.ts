@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-16 20:38:28
+ * @LastEditTime: 2023-05-22 15:15:08
  */
 import { Plugin, build } from "esbuild";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
@@ -129,7 +129,10 @@ const esbuildScanPlugin = (
         if (seen.has(key)) {
             return seen.get(key);
         }
-        const resolved = await container.resolveId(id, importer && normalizePath(importer));
+        const resolved = await container.resolveId(id, importer && normalizePath(importer), {
+            // 标记预构建扫描阶段
+            scan: true,
+        });
         const res = resolved?.id;
         seen.set(key, res);
         return res;

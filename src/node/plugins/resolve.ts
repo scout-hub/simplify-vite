@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 15:41:08
+ * @LastEditTime: 2023-05-23 11:42:17
  */
 import path from "path";
 import fs from 'fs';
@@ -14,6 +14,11 @@ import { pathExists } from "fs-extra";
 import { DEFAULT_EXTERSIONS } from "../constants";
 import { bareImportRE, cleanUrl, normalizePath } from "../utils";
 import { PackageData, resolvePackageData } from "../packages";
+import { DepsOptimizer, optimizedDepInfoFromId } from "../optimizer";
+
+export interface ResolveOptions {
+    extensions?: string[]
+}
 
 export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
     let serverContext: ServerContext;
@@ -23,10 +28,12 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
             // 保存服务端上下文
             serverContext = s;
         },
-        async resolveId(id: string, importer?: string) {
+        async resolveId(id: string, importer?: string, resolveOpts?: Record<string, any>) {
             const options = {
                 ...resolveOptions,
+                scan: resolveOpts?.scan ?? resolveOptions.scan,
             };
+            const depsOptimizer = resolveOptions.getDepsOptimizer?.();
             // 1. 绝对路径
             if (path.isAbsolute(id)) {
                 // 本身就是绝对路径，直接返回
@@ -39,10 +46,19 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                     return { id };
                 }
             }
+            // 如果 importer 之前没有被 vite 的解析器解析（当 esbuild 解析它时）解析 importer 的 pkg 并添加到 idToPkgMap
             // 2. 相对路径
             else if (id.startsWith(".")) {
                 if (!importer) {
                     throw new Error("`importer` should not be undefined");
+                }
+                const basedir = importer ? path.dirname(importer) : process.cwd();
+                const fsPath = path.resolve(basedir, id);
+                let res;
+                if ((res = tryFsResolve(fsPath, options))) {
+                    return {
+                        id: res,
+                    };
                 }
                 const hasExtension = path.extname(id).length > 1;
                 let resolvedId: string;
@@ -76,6 +92,14 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
             // 外部包的导入
             if (bareImportRE.test(id)) {
                 let res;
+                if (
+                    // 非预构建阶段执行
+                    !options.scan &&
+                    depsOptimizer &&
+                    (res = await tryOptimizedResolve(depsOptimizer, id, importer))
+                ) {
+                    return res;
+                }
                 if ((res = tryNodeResolve(id, importer, options, true))) {
                     return res as any;
                 }
@@ -84,6 +108,23 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
         },
     };
 }
+
+/**
+ * @author: Zhouqi
+ * @description: 解析优化路径
+ */
+export const tryOptimizedResolve = async (
+    depsOptimizer: DepsOptimizer,
+    id: string,
+    importer?: string,
+) => {
+    const metadata = depsOptimizer.metadata;
+    const depInfo = optimizedDepInfoFromId(metadata, id);
+    if (depInfo) return depsOptimizer.getOptimizedDepId(depInfo);
+    if (!importer) return;
+    console.error('error');
+    return '';
+};
 
 /**
  * @author: Zhouqi
@@ -255,6 +296,12 @@ const tryFsResolve = (fsPath: string, options: any) => {
     if ((res = tryResolveFile(fsPath, '', options))) {
         return res;
     }
+    // 尝试添加后缀名获取文件
+    for (const ext of options.extensions) {
+        if (res = tryResolveFile(fsPath + ext, '', options)) {
+            return res;
+        }
+    }
 };
 
 /**
@@ -266,7 +313,18 @@ const tryResolveFile = (
     postfix: string,
     options: any
 ) => {
-    return getRealPath(file, options.preserveSymlinks) + postfix;
+    let stat;
+    try {
+        // 获取文件信息，判断文件是否存在
+        stat = fs.statSync(file, { throwIfNoEntry: false });
+    }
+    catch {
+        return;
+    }
+    // 如果文件存在则获取文件的真实路径
+    if (stat) {
+        return getRealPath(file, options.preserveSymlinks) + postfix;
+    }
 }
 
 /**

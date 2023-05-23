@@ -6,7 +6,7 @@ import fs from "fs";
 import { build } from 'esbuild';
 import { DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
 import { dynamicImport, isBuiltin, lookupFile, mergeConfig, normalizePath } from "./utils";
-import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
+import { ResolveOptions, resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 import { pathToFileURL } from "node:url";
 import { resolveBuildOptions } from './build';
 import { resolvePlugins } from './plugins';
@@ -39,7 +39,8 @@ export interface UserConfig {
     optimizeDeps?: OptimizeDeps
     build?: BuildOptions
     plugins?: Plugin[]
-    cacheDir?: string
+    cacheDir?: string,
+    resolve?: ResolveOptions
 }
 
 export interface InlineConfig extends UserConfig { }
@@ -95,7 +96,7 @@ export const resolveConfig = async (
     const cacheDir = normalizePath(
         config.cacheDir ?
             path.resolve(resolvedRoot, config.cacheDir) :
-            path.join(path.dirname(pkgPath || ''), `node_modules/.vite`)
+            path.join(path.dirname(pkgPath || ''), `node_modules/.m-vite`)
     );
 
     //创建一个用于特殊场景的内部解析器，例如优化器和处理 css @imports
@@ -114,15 +115,23 @@ export const resolveConfig = async (
                         }),
                     ],
                 }));
-            return (await container.resolveId(id, importer))?.id
+            return (await container.resolveId(id, importer, {
+                scan: options?.scan,
+            }))?.id
         }
     };
+
+    const resolveOptions = {
+        // 导入时想忽略的扩展名
+        extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS,
+    }
 
     const optimizeDeps = config.optimizeDeps || {};
     const resolvedConfig: ResolvedConfig = {
         root: resolvedRoot,
         build: resolvedBuildOptions,
         cacheDir,
+        resolve: resolveOptions,
         mode,
         inlineConfig,
         command,

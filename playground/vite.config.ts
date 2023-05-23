@@ -2,10 +2,10 @@
  * @Author: Zhouqi
  * @Date: 2022-11-21 15:51:34
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-16 21:16:15
+ * @LastEditTime: 2023-05-21 20:36:59
  */
 // import path from 'path';
-import { defineConfig, loadEnv } from 'simplify-vite';
+import { defineConfig } from 'simplify-vite';
 // import react from '@vitejs/plugin-react';
 // import { normalizePath } from 'vite';
 // import autoprefixer from 'autoprefixer';

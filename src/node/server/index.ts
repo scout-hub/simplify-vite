@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 16:48:11
+ * @LastEditTime: 2023-05-22 14:16:28
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -124,7 +124,7 @@ export const createServer = async (inlineConfig: InlineConfig = {}) => {
     if (httpServer) {
         const listen = httpServer.listen.bind(httpServer);
         httpServer.listen = (async (port: number = 3000, ...args: any[]) => {
-            await initServer()
+            await initServer();
             return listen(port, ...args)
         }) as any;
     }

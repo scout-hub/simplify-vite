@@ -1,50 +1,21 @@
 /*
  * @Author: Zhouqi
- * @Date: 2023-02-20 15:59:15
+ * @Date: 2022-11-21 16:29:12
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-04-11 21:14:20
+ * @LastEditTime: 2023-05-21 21:08:57
  */
-import { useState } from "react";
-import React from "react";
-import logo from "./logo.svg";
-import "./App.css";
+// import { Header } from './components/Header';
+// import Test from './components/Test';
+import React,{useState} from 'react';
+
+console.log(useState);
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <img className="App-logo" src={logo} alt="" />
-        <p>Hello Vite + React</p>
-        <p>
-          <button type="button" onClick={() => setCount((count) => count + 1)}>
-            count is: {count}
-          </button>
-        </p>
-        <p>
-          Edit <code>App</code> and save e test.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {" | "}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
-        </p>
-      </header>
+    <div>
+      {/* <Header />
+      <Test /> */}
+      123
     </div>
   );
 }

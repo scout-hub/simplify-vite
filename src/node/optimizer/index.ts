@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 14:41:41
+ * @LastEditTime: 2023-05-22 15:32:44
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -61,7 +61,8 @@ export interface DepOptimizationMetadata {
 }
 
 export interface DepsOptimizer {
-    metadata: DepOptimizationMetadata
+    metadata: DepOptimizationMetadata,
+    getOptimizedDepId: (depInfo: OptimizedDepInfo) => string
 }
 
 /**
@@ -187,3 +188,13 @@ export const addOptimizedDepInfo = (
     metadata.depInfoList.push(depInfo);
     return depInfo;
 }
+
+/**
+ * @author: Zhouqi
+ * @description: 根据模块id路径获取优化依赖信息
+ */
+export const optimizedDepInfoFromId = (
+    metadata: DepOptimizationMetadata,
+    id: string,
+): OptimizedDepInfo | undefined => metadata.optimized[id] || metadata.discovered[id] || metadata.chunks[id]
+

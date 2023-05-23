@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 15:42:45
+ * @LastEditTime: 2023-05-22 15:29:22
  */
 import { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";
@@ -90,9 +90,12 @@ export function esbuildDepPlugin(
     qualified: Record<string, string>,
     config: ResolvedConfig,
 ): Plugin {
-    const _resolve = config.createResolver();
+    const _resolve = config.createResolver({
+        scan: true
+    });
     const _resolveRequire = config.createResolver({
-        isRequire: true
+        isRequire: true,
+        scan: true
     });
     const resolve = (
         id: string,

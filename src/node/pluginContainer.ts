@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:28:44
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-16 16:38:56
+ * @LastEditTime: 2023-05-22 15:17:43
  */
 import type {
     LoadResult,
@@ -15,7 +15,7 @@ import type {
 import { join } from "node:path";
 
 export interface PluginContainer {
-    resolveId(id: string, importer?: string): Promise<PartialResolvedId | null>;
+    resolveId(id: string, importer?: string, options?: Record<string, any>): Promise<PartialResolvedId | null>;
     load(id: string): Promise<LoadResult | null>;
     transform(code: string, id: string): Promise<SourceDescription | null>;
 }
@@ -34,11 +34,13 @@ export const createPluginContainer = (config: Record<string, any>): PluginContai
     }
     // 插件容器
     const pluginContainer: PluginContainer = {
-        async resolveId(id: string, importer: string = join(root, 'index.html')) {
+        async resolveId(id: string, importer: string = join(root, 'index.html'), options: Record<string, any> = {}) {
             const ctx = new Context() as any;
             for (const plugin of plugins) {
                 if (!plugin.resolveId) continue;
-                const newId = await plugin.resolveId.call(ctx as any, id, importer);
+                const newId = await plugin.resolveId.call(ctx as any, id, importer, {
+                    scan: options.scan
+                });
                 // 如果匹配到一个则直接返回
                 if (newId) {
                     id = typeof newId === "string" ? newId : newId.id;

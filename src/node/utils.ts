@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 14:42:52
+ * @LastEditTime: 2023-05-23 13:19:20
  */
 import os from "os";
 import path from "path";
@@ -11,6 +11,9 @@ import { builtinModules } from 'node:module'
 import resolve from 'resolve';
 // 调试包
 import { HASH_RE, QEURY_RE, JS_TYPES_RE, CLIENT_PUBLIC_PATH, DEFAULT_EXTENSIONS } from "./constants";
+import { TransformResult } from "esbuild";
+import MagicString from "magic-string";
+import { ResolvedConfig } from "./config";
 
 const INTERNAL_LIST = [CLIENT_PUBLIC_PATH, "/@react-refresh"];
 
@@ -214,3 +217,11 @@ export const flattenId = (id: string): string =>
         .replace(/(\s*>\s*)/g, '___')
 
 export const isExternalUrl = (url: string): boolean => externalRE.test(url)
+
+export function transformStableResult(
+    s: MagicString
+) {
+    return {
+        code: s.toString()
+    }
+}

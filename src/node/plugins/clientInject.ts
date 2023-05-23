@@ -41,8 +41,6 @@ export function clientInjectPlugin(): Plugin {
             }
         },
         transformIndexHtml(raw) {
-            console.log(1);
-
             // 插入客户端脚本
             // 即在 head 标签后面加上 <script type="module" src="/@vite/client"></script>
             // 注: 在 indexHtml 中间件里面会自动执行 transformIndexHtml 钩子

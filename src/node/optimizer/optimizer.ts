@@ -2,13 +2,13 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 14:45:13
+ * @LastEditTime: 2023-05-22 15:35:07
  */
 import path from "node:path";
 import fs from "node:fs"
 // import { build } from "esbuild";
 // import { green } from "picocolors";
-import { scanImports, scanPlugin } from "./scan";
+import { scanImports } from "./scan";
 // import { preBundlePlugin } from "./esbuildDepPlugin";
 // import { PRE_BUNDLE_DIR } from "../constants";
 import {
@@ -19,7 +19,8 @@ import {
     getOptimizedDepPath,
     addOptimizedDepInfo,
     extractExportsData,
-    DepsOptimizer
+    DepsOptimizer,
+    OptimizedDepInfo
 } from '.'
 import { ResolvedConfig } from "../config";
 import { emptyDir } from "../utils";
@@ -49,8 +50,10 @@ const createDepsOptimizer = async (
     const cachedMetadata = loadCachedDepOptimizationMetadata(config);
     // 创建metadata对象，缓存预构建依赖的信息
     let metadata = cachedMetadata || initDepsOptimizerMetadata(config);
+    
     const depsOptimizer = {
-        metadata
+        metadata,
+        getOptimizedDepId: (depInfo: OptimizedDepInfo) => `${depInfo.file}`,
     };
 
     // 将预构建依赖分析对象存入map中
@@ -65,6 +68,7 @@ const createDepsOptimizer = async (
                 addMissingDep(id, deps[id]);
             }
         }
+        // console.log('metadata');
         const postScanOptimizationResult = runOptimizeDeps(config, deps);
     }
 
@@ -112,4 +116,13 @@ const loadCachedDepOptimizationMetadata = (config: ResolvedConfig): DepOptimizat
     }
     return cachedMetadata;
 };
+
+/**
+ * @author: Zhouqi
+ * @description: 根据config配置获取预构建依赖分析对象
+ */
+export const getDepsOptimizer = (
+    config: ResolvedConfig,
+): DepsOptimizer | undefined => depsOptimizerMap.get(config,)
+
 
