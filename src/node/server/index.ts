@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 14:16:28
+ * @LastEditTime: 2023-05-23 20:43:48
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -76,13 +76,6 @@ export const createServer = async (inlineConfig: InlineConfig = {}) => {
         httpServer,
         async listen(port?: number, isRestart?: boolean) {
             await startServer(serverContext, port, isRestart)
-            // if (httpServer) {
-            //     server.resolvedUrls = await resolveServerUrls(
-            //         httpServer,
-            //         config.server,
-            //         config,
-            //     )
-            // }
             console.log(
                 green("🚀 No-Bundle 服务已经成功启动!"),
                 `耗时: ${Date.now() - startTime}ms`
@@ -105,12 +98,15 @@ export const createServer = async (inlineConfig: InlineConfig = {}) => {
         }
     }
 
+    // 注册中间件
     app.use(indexHtmlMiddware(serverContext));
     app.use(transformMiddleware(serverContext));
     app.use(staticMiddleware(serverContext.root));
 
     let initingServer: Promise<void> | undefined;
     let serverInited = false;
+
+    // 初始化服务
     const initServer = async () => {
         if (serverInited) return;
         if (initingServer) return initingServer;

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 17:50:38
+ * @LastEditTime: 2023-05-23 22:05:48
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -70,7 +70,10 @@ export interface DepOptimizationMetadata {
 export interface DepsOptimizer {
     metadata: DepOptimizationMetadata,
     getOptimizedDepId: (depInfo: OptimizedDepInfo) => string,
-    delayDepsOptimizerUntil: (id: string, done: () => Promise<any>) => void
+    delayDepsOptimizerUntil: (id: string, done: () => Promise<any>) => void,
+    isOptimizedDepUrl: (url: string) => boolean
+    isOptimizedDepFile: (id: string) => boolean
+    scanProcessing?: Promise<void>,
 }
 
 /**
@@ -99,7 +102,11 @@ export const runOptimizeDeps = async (
     // 缓存目录中的所有文件都应被识别为 ES 模块
     writeFile(path.resolve(processingCacheDir, 'package.json'), JSON.stringify({ type: 'module' }));
 
-    const metadata = initDepsOptimizerMetadata(config);
+    const metadata: DepOptimizationMetadata = initDepsOptimizerMetadata(config);
+
+    // 没有预构建的依赖，直接返回
+    const qualifiedIds = Object.keys(depsInfo);
+    if (!qualifiedIds.length) return;
 
     const processingResult = {
         metadata,
@@ -114,10 +121,16 @@ export const runOptimizeDeps = async (
         }
     };
 
+    /**
+     * esbuild 生成具有最低公共祖先基础的嵌套目录输出，这是不可预测的，并且难以分析条目/输出映射。
+     * 所以我们在这里做的是：
+     * 1. 压平所有的ids来消除斜杠  例如react-dom/client在内部会被记录为react-dom_client
+     * 2. 在插件中，我们自己读取条目作为虚拟文件来保留路径。
+     */
     const flatIdDeps: Record<string, string> = {};
     const plugins = [];
     for (const id in depsInfo) {
-        const src = depsInfo[id];
+        const src = depsInfo[id].src;
         const flatId = flattenId(id);
         flatIdDeps[flatId] = src;
     }
@@ -126,14 +139,60 @@ export const runOptimizeDeps = async (
         entryPoints: Object.keys(flatIdDeps),
         bundle: true,
         format: 'esm',
+        platform: 'browser',
         // build的时候会从config.build.target中获取，dev模式下用vite内部定义的值
         target: ESBUILD_MODULES_TARGET,
+        splitting: true,
         sourcemap: true,
         outdir: processingCacheDir,
-        plugins
+        plugins,
+        supported: {
+            'dynamic-import': true,
+            'import-meta': true,
+        },
     });
+    for (const id in depsInfo) {
+        const { exportsData, ...info } = depsInfo[id];
+        // 将depsInfo中的信息添加到metadata的optimized中
+        addOptimizedDepInfo(metadata, 'optimized', {
+            ...info,
+        });
+    }
+    const dataPath = path.join(processingCacheDir, '_metadata.json');
+    writeFile(dataPath, stringifyDepsOptimizerMetadata(metadata, depsCacheDir));
     return processingResult;
 };
+
+const stringifyDepsOptimizerMetadata = (
+    metadata: DepOptimizationMetadata,
+    depsCacheDir: string,
+) => {
+    const { optimized, chunks } = metadata;
+    return JSON.stringify(
+        {
+            optimized: Object.fromEntries(
+                Object.values(optimized).map(
+                    ({ id, src, file, fileHash, needsInterop }) => [
+                        id,
+                        {
+                            src,
+                            file,
+                            fileHash,
+                            needsInterop,
+                        },
+                    ],
+                ),
+            ),
+            chunks: Object.fromEntries(
+                Object.values(chunks).map(({ id, file }) => [id, { file }]),
+            ),
+        },
+        // 路径可以是绝对路径或相对于 _metadata.json 所在的 deps 缓存目录
+        (key: string, value: string) => key === 'file' || key === 'src' ? normalizePath(path.relative(depsCacheDir, value)) : value
+        ,
+        2
+    );
+}
 
 /**
  * @author: Zhouqi
@@ -211,7 +270,8 @@ export async function extractExportsData(resolved: string, config: ResolvedConfi
 export const addOptimizedDepInfo = (
     metadata: DepOptimizationMetadata,
     type: 'optimized' | 'discovered' | 'chunks',
-    depInfo: OptimizedDepInfo) => {
+    depInfo: OptimizedDepInfo
+) => {
     metadata[type][depInfo.id] = depInfo;
     metadata.depInfoList.push(depInfo);
     return depInfo;

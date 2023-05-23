@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 15:15:08
+ * @LastEditTime: 2023-05-23 21:32:01
  */
 import { Plugin, build } from "esbuild";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
@@ -76,24 +76,30 @@ export const scanImports = async (config: Record<string, any>): Promise<{ deps: 
     } else {
         entries = await globEntries('**/*.html', config);
     }
-    // 过滤出符合需要扫描的资源
+    // 过滤出符合能够进行扫描的依赖
     entries = entries.filter(item => isScannable(item) && fs.existsSync(item));
-    let deps = {};
-    let missing = {};
     if (!entries.length) {
         return {
-            deps
+            deps: {}
         };
     }
+
+    let deps: Record<string, string> = {};
+    let missing: Record<string, string> = {};
+
     const container = createPluginContainer(config);
+
+    // 创建esbuild的扫描插件
     const plugin = esbuildScanPlugin(config, container, deps, missing, entries);
     // 通过esbuild预构建分析需要打包的资源存储到deps中
     await build({
         write: false,
+        // 作为打包入口，可以手动书写内容
         stdin: {
             contents: entries.map((e) => `import ${JSON.stringify(e)}`).join('\n'),
             loader: 'js',
         },
+        format: 'esm',
         bundle: true,
         plugins: [plugin],
     });

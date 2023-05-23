@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 17:54:21
+ * @LastEditTime: 2023-05-23 22:12:59
  */
 import path from "node:path";
 import fs from "node:fs"
@@ -29,7 +29,7 @@ import { emptyDir } from "../utils";
 
 /**
  * @author: Zhouqi
- * @description: 初始化依赖分析
+ * @description: 初始化依赖优化
  */
 export const initDepsOptimizer = async (
     config: ResolvedConfig,
@@ -42,7 +42,7 @@ const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
 
 /**
  * @author: Zhouqi
- * @description: 创建预构建依赖分析
+ * @description: 创建预构建依赖优化
  */
 const createDepsOptimizer = async (
     config: ResolvedConfig,
@@ -51,10 +51,11 @@ const createDepsOptimizer = async (
     let postScanOptimizationResult: Promise<any> | undefined;
     // 读取缓存的metadata json文件
     const cachedMetadata = loadCachedDepOptimizationMetadata(config);
-    // 创建metadata对象，缓存预构建依赖的信息
+    // 如果没有获取到缓存预构建依赖的信息则去创建
     let metadata = cachedMetadata || initDepsOptimizerMetadata(config);
 
-    const depsOptimizer = {
+    // 依赖优化器对象
+    const depsOptimizer: DepsOptimizer = {
         metadata,
         getOptimizedDepId: (depInfo: OptimizedDepInfo) => `${depInfo.file}`,
         delayDepsOptimizerUntil,
@@ -62,19 +63,54 @@ const createDepsOptimizer = async (
         isOptimizedDepUrl: createIsOptimizedDepUrl(config),
     };
 
-    // 将预构建依赖分析对象存入map中
+    // 将预构建优化器对象存入map中
     depsOptimizerMap.set(config, depsOptimizer);
+
+    // 标记是否正在处理静态预构建依赖分析
+    let currentlyProcessing = false;
+
+    // 根据是否读取到缓存的metadata json数据来判断是否是第一次运行
+    let firstRunCalled = !!cachedMetadata;
+
+    // 如果没有缓存或者它已经过时，我们需要准备第一次运行
 
     // 是否是第一次预构建，不存在缓存的metadata
     if (!cachedMetadata) {
-        // todo 开发模式下才需要扫描依赖
-        const deps = await discoverProjectDependencies(config);
-        for (const id of Object.keys(deps)) {
-            if (!metadata.discovered[id]) {
-                addMissingDep(id, deps[id]);
-            }
-        }
-        postScanOptimizationResult = runOptimizeDeps(config, deps);
+        // 进入预构建分析处理阶段
+        currentlyProcessing = true;
+
+        let deps: Record<string, string> = {};
+
+        /**
+         *  todo: 根据vite配置中的 optimizeDeps.include 信息初始化发现的 deps
+         *  addManuallyIncludedOptimizeDeps
+         *  toDiscoveredDependencies
+         */
+
+        // todo 开发模式下才需要扫描依赖 isBuild === false
+        // 源码中开启一个定时器进行预构建依赖扫描，为了保证服务已经处于监听状态
+        depsOptimizer.scanProcessing = new Promise(resolve => {
+            setTimeout(async () => {
+                try {
+                    deps = await discoverProjectDependencies(config);
+
+                    // 添加缺失的依赖到 metadata.discovered 中
+                    for (const id of Object.keys(deps)) {
+                        if (!metadata.discovered[id]) {
+                            addMissingDep(id, deps[id]);
+                        }
+                    }
+                    const knownDeps = prepareKnownDeps();
+                    postScanOptimizationResult = runOptimizeDeps(config, knownDeps);
+                } catch (error) {
+
+                }
+                finally {
+                    resolve();
+                    depsOptimizer.scanProcessing = undefined;
+                }
+            });
+        });
     }
 
     // 添加缺失的依赖信息
@@ -133,7 +169,11 @@ const createDepsOptimizer = async (
     }
 
     async function onCrawlEnd() {
-        const crawlDeps = Object.keys(metadata.discovered)
+        const crawlDeps = Object.keys(metadata.discovered);
+
+        // 保证预构建扫描以及依赖优化处理都已经完成
+        await depsOptimizer.scanProcessing;
+
         if (postScanOptimizationResult) {
             const result = await postScanOptimizationResult;
             postScanOptimizationResult = undefined;
@@ -144,9 +184,42 @@ const createDepsOptimizer = async (
             const needsInteropMismatch = findInteropMismatches(metadata.discovered, result.metadata.optimized);
             const scannerMissedDeps = crawlDeps.some((dep) => !scanDeps.includes(dep));
             const outdatedResult = needsInteropMismatch.length > 0 || scannerMissedDeps;
-            console.log(scannerMissedDeps);
+            if (outdatedResult) {
+
+            } else {
+                runOptimizer(result);
+            }
         } else {
             throw new Error('!postScanOptimizationResult');
+        }
+    }
+
+    function prepareKnownDeps() {
+        const knownDeps: Record<string, OptimizedDepInfo> = {}
+        // 克隆优化的信息对象，fileHash，browserHash 可能会为他们改变
+        for (const dep of Object.keys(metadata.optimized)) {
+            knownDeps[dep] = { ...metadata.optimized[dep] }
+        }
+        for (const dep of Object.keys(metadata.discovered)) {
+            const { processing, ...info } = metadata.discovered[dep]
+            knownDeps[dep] = info
+        }
+        return knownDeps;
+    }
+
+    async function runOptimizer(preRunResult?: any) {
+        const processingResult = preRunResult;
+        const newData = processingResult.metadata;
+        const needsInteropMismatch = findInteropMismatches(metadata.discovered, newData.optimized);
+        const needsReload = needsInteropMismatch.length > 0 ||
+            Object.keys(metadata.optimized).some((dep) => {
+                return (metadata.optimized[dep].fileHash !== newData.optimized[dep].fileHash);
+            });
+        const commitProcessing = async () => {
+            await processingResult.commit();
+        }
+        if (!needsReload) {
+            await commitProcessing();
         }
     }
 }
@@ -155,7 +228,7 @@ const createDepsOptimizer = async (
  * @author: Zhouqi
  * @description: 查找预构建依赖
  */
-const discoverProjectDependencies = async (config: Record<string, any>) => {
+const discoverProjectDependencies = async (config: ResolvedConfig) => {
     // 根据import进行依赖分析，找出需要预构建的资源
     const { deps } = await scanImports(config);
     return deps;
@@ -166,7 +239,7 @@ const discoverProjectDependencies = async (config: Record<string, any>) => {
  * @description: 获取缓存的预构建依赖信息
  */
 const loadCachedDepOptimizationMetadata = (config: ResolvedConfig): DepOptimizationMetadata | undefined => {
-    // 缓存目录存在则清空
+    // 在 Vite 2.9 之前，依赖缓存在 cacheDir 的根目录中。为了兼容，如果我们找到旧的结构，我们会移除缓存
     if (fs.existsSync(path.join(config.cacheDir, '_metadata.json'))) {
         emptyDir(config.cacheDir);
     }
@@ -174,9 +247,11 @@ const loadCachedDepOptimizationMetadata = (config: ResolvedConfig): DepOptimizat
     const depsCacheDir = getDepsCacheDir(config);
     let cachedMetadata;
     try {
-        // 定义缓存地址
+        // 定义缓存文件  /node_modules/.m-vite/deps/_metadata.json
         const cachedMetadataPath = path.join(depsCacheDir, '_metadata.json');
+        // 读取缓存的meta json文件
         const metaData = fs.readFileSync(cachedMetadataPath, 'utf-8');
+        console.log(metaData);
         // cachedMetadata = parseDepsOptimizerMetadata(fs.readFileSync(cachedMetadataPath, 'utf-8'), depsCacheDir);
     }
     catch (e) {
@@ -214,5 +289,7 @@ const findInteropMismatches = (
     }
     return needsInteropMismatch
 }
+
+
 
 
