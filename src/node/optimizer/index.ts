@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 17:07:20
+ * @LastEditTime: 2023-05-24 20:49:28
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -121,6 +121,7 @@ export const runOptimizeDeps = async (
             await renameDir(processingCacheDir, depsCacheDir);
         },
         cancel() {
+            // 取消预构建，删除预构建临时目录
             fs.rmSync(processingCacheDir, { recursive: true, force: true })
         }
     };
@@ -297,10 +298,8 @@ export const optimizedDepInfoFromId = (
 export const isOptimizedDepFile = (
     id: string,
     config: ResolvedConfig,
-): boolean => {
-    // console.log(id, getDepsCacheDirPrefix(config));
-    return id.startsWith(getDepsCacheDirPrefix(config));
-}
+): boolean => id.startsWith(getDepsCacheDirPrefix(config));
+
 
 export const createIsOptimizedDepUrl = (
     config: ResolvedConfig,
@@ -335,4 +334,60 @@ export function optimizedDepInfoFromFile(
     file: string,
 ): OptimizedDepInfo | undefined {
     return metadata.depInfoList.find((depInfo) => depInfo.file === file)
+}
+
+/**
+* @author: Zhouqi
+* @description: 获取缓存的预构建依赖信息
+*/
+export const loadCachedDepOptimizationMetadata = (config: ResolvedConfig): DepOptimizationMetadata | undefined => {
+    // 在 Vite 2.9 之前，依赖缓存在 cacheDir 的根目录中。为了兼容，如果我们找到旧的结构，我们会移除缓存
+    if (fs.existsSync(path.join(config.cacheDir, '_metadata.json'))) emptyDir(config.cacheDir);
+    // 获取缓存目录
+    const depsCacheDir = getDepsCacheDir(config);
+    let cachedMetadata;
+    try {
+        // 定义缓存文件  /node_modules/.m-vite/deps/_metadata.json
+        const cachedMetadataPath = path.join(depsCacheDir, '_metadata.json');
+        // 读取缓存的meta json文件
+        cachedMetadata = parseDepsOptimizerMetadata(fs.readFileSync(cachedMetadataPath, 'utf-8'), depsCacheDir);
+        if (cachedMetadata) return cachedMetadata;
+    }
+    catch (e) { }
+    return cachedMetadata;
+};
+
+/**
+ * @author: Zhouqi
+ * @description: 解析metadata.json数据
+ */
+const parseDepsOptimizerMetadata = (
+    jsonMetadata: string,
+    depsCacheDir: string,
+): DepOptimizationMetadata | undefined => {
+    const { optimized, chunks } = JSON.parse(
+        jsonMetadata,
+        // 路径可以是绝对路径或相对于 _metadata.json 所在的 deps 缓存目录
+        (key: string, value: string) => key === 'file' || key === 'src' ? normalizePath(path.resolve(depsCacheDir, value)) : value
+    )
+    const metadata = {
+        optimized: {},
+        discovered: {},
+        chunks: {},
+        depInfoList: [],
+    }
+    for (const id of Object.keys(optimized)) {
+        addOptimizedDepInfo(metadata, 'optimized', {
+            ...optimized[id],
+            id,
+        })
+    }
+    for (const id of Object.keys(chunks)) {
+        addOptimizedDepInfo(metadata, 'chunks', {
+            ...chunks[id],
+            id,
+            needsInterop: false,
+        })
+    }
+    return metadata
 }

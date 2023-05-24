@@ -2,18 +2,14 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 16:39:43
+ * @LastEditTime: 2023-05-24 21:07:36
  */
-import path from "node:path";
-import fs from "node:fs"
 // import { build } from "esbuild";
 // import { green } from "picocolors";
 import { scanImports } from "./scan";
 // import { preBundlePlugin } from "./esbuildDepPlugin";
 // import { PRE_BUNDLE_DIR } from "../constants";
 import {
-    DepOptimizationMetadata,
-    getDepsCacheDir,
     initDepsOptimizerMetadata,
     runOptimizeDeps,
     getOptimizedDepPath,
@@ -23,7 +19,8 @@ import {
     OptimizedDepInfo,
     isOptimizedDepFile,
     createIsOptimizedDepUrl,
-    newDepOptimizationProcessing
+    newDepOptimizationProcessing,
+    loadCachedDepOptimizationMetadata
 } from '.'
 import { ResolvedConfig } from "../config";
 import { emptyDir } from "../utils";
@@ -80,11 +77,12 @@ const createDepsOptimizer = async (
     let currentlyProcessing = false;
 
     // 根据是否读取到缓存的metadata json数据来判断是否是第一次运行
+    // 如果cachedMetadata存在，说明之前已经运行过一次了
     let firstRunCalled = !!cachedMetadata;
 
     // 如果没有缓存或者它已经过时，我们需要准备第一次运行
 
-    // 是否是第一次预构建，不存在缓存的metadata
+    // 磁盘中缓存的metadata数据判断之前是否已经进行过预构建，如果没有则需要进入预构建流程
     if (!cachedMetadata) {
         // 进入预构建分析处理阶段
         currentlyProcessing = true;
@@ -179,21 +177,36 @@ const createDepsOptimizer = async (
     }
 
     async function onCrawlEnd() {
+        // 已经不是第一次运行了，所以可以直接返回，不需要再进行接下去的预构建处理
+        if (firstRunCalled) return;
         const crawlDeps = Object.keys(metadata.discovered);
 
+        currentlyProcessing = false;
         // 保证预构建扫描以及依赖优化处理都已经完成
         await depsOptimizer.scanProcessing;
 
         if (postScanOptimizationResult) {
             const result = await postScanOptimizationResult;
             postScanOptimizationResult = undefined;
-            const scanDeps = Object.keys(result.metadata.optimized)
-            // 判断是否有缺失的预构建依赖
-            const needsInteropMismatch = findInteropMismatches(metadata.discovered, result.metadata.optimized);
-            const scannerMissedDeps = crawlDeps.some((dep) => !scanDeps.includes(dep));
-            const outdatedResult = needsInteropMismatch.length > 0 || scannerMissedDeps;
-            if (outdatedResult) {
+            const scanDeps = Object.keys(result.metadata.optimized);
 
+            /**
+             * 这种情况针对第一次进行预构建运行并且预构建中没有需要预构建的依赖的情况
+             * 这种情况下需要把预构建创建的临时目录给删除并标记firstRunCalled为true
+             */
+            if (scanDeps.length === 0 && crawlDeps.length === 0) {
+                result.cancel();
+                firstRunCalled = true;
+                return;
+            }
+
+            // 判断是否有缺失的依赖，如果有缺失的新依赖，则需要重新进行预构建处理
+            const scannerMissedDeps = crawlDeps.some((dep) => !scanDeps.includes(dep));
+            const outdatedResult = scannerMissedDeps;
+            if (outdatedResult) {
+                // 删除此扫描结果，并执行新的优化以避免完全重新加载
+                result.cancel();
+                // 重新进行预构建优化
             } else {
                 runOptimizer(result);
             }
@@ -244,32 +257,6 @@ const discoverProjectDependencies = async (config: ResolvedConfig) => {
     const { deps } = await scanImports(config);
     return deps;
 }
-
-/**
- * @author: Zhouqi
- * @description: 获取缓存的预构建依赖信息
- */
-const loadCachedDepOptimizationMetadata = (config: ResolvedConfig): DepOptimizationMetadata | undefined => {
-    // 在 Vite 2.9 之前，依赖缓存在 cacheDir 的根目录中。为了兼容，如果我们找到旧的结构，我们会移除缓存
-    if (fs.existsSync(path.join(config.cacheDir, '_metadata.json'))) {
-        emptyDir(config.cacheDir);
-    }
-    // 获取缓存目录
-    const depsCacheDir = getDepsCacheDir(config);
-    let cachedMetadata;
-    try {
-        // 定义缓存文件  /node_modules/.m-vite/deps/_metadata.json
-        const cachedMetadataPath = path.join(depsCacheDir, '_metadata.json');
-        // 读取缓存的meta json文件
-        const metaData = fs.readFileSync(cachedMetadataPath, 'utf-8');
-        console.log(metaData);
-        // cachedMetadata = parseDepsOptimizerMetadata(fs.readFileSync(cachedMetadataPath, 'utf-8'), depsCacheDir);
-    }
-    catch (e) {
-        // 没有获取到缓存的metadata
-    }
-    return cachedMetadata;
-};
 
 /**
  * @author: Zhouqi
