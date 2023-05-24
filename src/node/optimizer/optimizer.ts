@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 22:12:59
+ * @LastEditTime: 2023-05-24 16:39:43
  */
 import path from "node:path";
 import fs from "node:fs"
@@ -22,7 +22,8 @@ import {
     DepsOptimizer,
     OptimizedDepInfo,
     isOptimizedDepFile,
-    createIsOptimizedDepUrl
+    createIsOptimizedDepUrl,
+    newDepOptimizationProcessing
 } from '.'
 import { ResolvedConfig } from "../config";
 import { emptyDir } from "../utils";
@@ -66,6 +67,15 @@ const createDepsOptimizer = async (
     // 将预构建优化器对象存入map中
     depsOptimizerMap.set(config, depsOptimizer);
 
+    // 这里会创建一个预构建依赖处理进程，当我们在浏览器访问一个预构建的依赖时，需要等到依赖预构建完成
+    let depOptimizationProcessing = newDepOptimizationProcessing();
+
+    const resolveEnqueuedProcessingPromises = () => {
+        // 解决所有的预构建进程处理，
+        // 源码中用了一个队列去管理所有的处理进程，这里先处理单个的情况
+        depOptimizationProcessing.resolve()
+    }
+
     // 标记是否正在处理静态预构建依赖分析
     let currentlyProcessing = false;
 
@@ -93,7 +103,6 @@ const createDepsOptimizer = async (
             setTimeout(async () => {
                 try {
                     deps = await discoverProjectDependencies(config);
-
                     // 添加缺失的依赖到 metadata.discovered 中
                     for (const id of Object.keys(deps)) {
                         if (!metadata.discovered[id]) {
@@ -119,6 +128,7 @@ const createDepsOptimizer = async (
             id,
             file: getOptimizedDepPath(id, config),
             src: resolved,
+            processing: depOptimizationProcessing.promise,
             exportsData: extractExportsData(resolved, config),
         });
     }
@@ -177,8 +187,6 @@ const createDepsOptimizer = async (
         if (postScanOptimizationResult) {
             const result = await postScanOptimizationResult;
             postScanOptimizationResult = undefined;
-
-            // todo 缺少scan时的依赖记录
             const scanDeps = Object.keys(result.metadata.optimized)
             // 判断是否有缺失的预构建依赖
             const needsInteropMismatch = findInteropMismatches(metadata.discovered, result.metadata.optimized);
@@ -215,8 +223,11 @@ const createDepsOptimizer = async (
             Object.keys(metadata.optimized).some((dep) => {
                 return (metadata.optimized[dep].fileHash !== newData.optimized[dep].fileHash);
             });
+        // 预构建依赖优化处理完成，更新依赖缓存
         const commitProcessing = async () => {
             await processingResult.commit();
+            // 执行所有的预构建处理进行，将内部的promise都resolve掉
+            resolveEnqueuedProcessingPromises();
         }
         if (!needsReload) {
             await commitProcessing();

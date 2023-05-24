@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:53:40
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 16:36:41
+ * @LastEditTime: 2023-05-24 16:53:54
  */
 import { Plugin } from "../plugin";
 import { esbuildTransformPlugin } from "./esbuild";
@@ -13,6 +13,7 @@ import { assetPlugin } from "./assets";
 import { clientInjectPlugin } from './clientInject';
 import { getDepsOptimizer } from "../optimizer/optimizer";
 import { ResolvedConfig } from "../config";
+import { optimizedDepsPlugin } from './optimizedDeps'
 
 export function resolvePlugins(
     config: ResolvedConfig,
@@ -25,6 +26,7 @@ export function resolvePlugins(
         }),
         esbuildTransformPlugin(),
         importAnalysisPlugin(config),
+        optimizedDepsPlugin(config),
         // cssPlugin(),
         // assetPlugin(),
         // clientInjectPlugin()

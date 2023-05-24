@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 13:21:59
+ * @LastEditTime: 2023-05-24 16:42:39
  */
 import { init, parse } from "es-module-lexer";
 import {
@@ -78,14 +78,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                     ms.overwrite(modStart, modEnd, url);
                     importedModules.add(url);
                 }
-                // else if (specifier.startsWith(".") || specifier.startsWith("/")) {
-                //     // 直接调用插件上下文的 resolve 方法，会自动经过路径解析插件的处理
-                //     const resolved = await resolve!(specifier, importer);
-                //     if (resolved) {
-                //         ms.overwrite(modStart, modEnd, resolved);
-                //         importedModules.add(resolved);
-                //     }
-                // }
                 if (!rewriteDone) {
                     str().overwrite(modStart, modEnd, url, {
                         contentOnly: true,

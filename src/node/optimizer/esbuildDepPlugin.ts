@@ -2,9 +2,9 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 15:29:22
+ * @LastEditTime: 2023-05-24 16:43:39
  */
-import { Loader, Plugin } from "esbuild";
+import type { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";
 // 用来分析 es 模块 import/export 语句的库
 import { init, parse } from "es-module-lexer";

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 22:05:48
+ * @LastEditTime: 2023-05-24 17:07:20
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -74,6 +74,10 @@ export interface DepsOptimizer {
     isOptimizedDepUrl: (url: string) => boolean
     isOptimizedDepFile: (id: string) => boolean
     scanProcessing?: Promise<void>,
+}
+export interface DepOptimizationProcessing {
+    promise: Promise<void>
+    resolve: () => void
 }
 
 /**
@@ -310,3 +314,25 @@ export const createIsOptimizedDepUrl = (
     }
 }
 
+/**
+ * @author: Zhouqi
+ * @description: 创建一个依赖优化的处理进程
+ */
+export function newDepOptimizationProcessing(): DepOptimizationProcessing {
+    let resolve: () => void
+    const promise = new Promise((_resolve) => {
+        resolve = _resolve
+    }) as Promise<void>
+    return { promise, resolve: resolve! }
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 根据文件内容查找metadata中的优化依赖信息
+ */
+export function optimizedDepInfoFromFile(
+    metadata: DepOptimizationMetadata,
+    file: string,
+): OptimizedDepInfo | undefined {
+    return metadata.depInfoList.find((depInfo) => depInfo.file === file)
+}
