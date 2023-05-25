@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 21:07:36
+ * @LastEditTime: 2023-05-25 15:19:49
  */
 // import { build } from "esbuild";
 // import { green } from "picocolors";
@@ -20,9 +20,13 @@ import {
     isOptimizedDepFile,
     createIsOptimizedDepUrl,
     newDepOptimizationProcessing,
-    loadCachedDepOptimizationMetadata
+    loadCachedDepOptimizationMetadata,
 } from '.'
-import { ResolvedConfig } from "../config";
+import {
+    ResolvedConfig,
+    getDepOptimizationConfig
+
+} from "../config";
 import { emptyDir } from "../utils";
 
 /**
@@ -55,10 +59,13 @@ const createDepsOptimizer = async (
     // 依赖优化器对象
     const depsOptimizer: DepsOptimizer = {
         metadata,
+        registerMissingImport,
         getOptimizedDepId: (depInfo: OptimizedDepInfo) => `${depInfo.file}`,
         delayDepsOptimizerUntil,
         isOptimizedDepFile: (id: string) => isOptimizedDepFile(id, config),
         isOptimizedDepUrl: createIsOptimizedDepUrl(config),
+        options: getDepOptimizationConfig(config),
+
     };
 
     // 将预构建优化器对象存入map中
@@ -120,6 +127,26 @@ const createDepsOptimizer = async (
         });
     }
 
+    /**
+     * @author: Zhouqi
+     * @description: 注册缺失的import依赖
+     */
+    function registerMissingImport(
+        id: string,
+        resolved: string,
+    ): OptimizedDepInfo {
+        const optimized = metadata.optimized[id];
+        if (optimized) return optimized;
+        const chunk = metadata.chunks[id];
+        if (chunk) return chunk;
+        let missing = metadata.discovered[id];
+        // 已经发现了这个缺失的依赖，它将在下一次重新运行时处理
+        if (missing) return missing;
+        // 添加缺失的依赖
+        missing = addMissingDep(id, resolved);
+        return missing;
+    }
+
     // 添加缺失的依赖信息
     function addMissingDep(id: string, resolved: string) {
         return addOptimizedDepInfo(metadata, 'discovered', {
@@ -131,10 +158,10 @@ const createDepsOptimizer = async (
         });
     }
 
-    // async function optimizeNewDeps() {
-    //     const knownDeps = prepareKnownDeps();
-    //     return await runOptimizeDeps(config, knownDeps);
-    // }
+    async function optimizeNewDeps() {
+        const knownDeps = prepareKnownDeps();
+        return await runOptimizeDeps(config, knownDeps);
+    }
 
     // 记录已经注册过的依赖
     let registeredIds: { id: string, done: () => Promise<any> }[] = []
@@ -207,12 +234,26 @@ const createDepsOptimizer = async (
                 // 删除此扫描结果，并执行新的优化以避免完全重新加载
                 result.cancel();
                 // 重新进行预构建优化
+                for (const dep of scanDeps) {
+                    if (!crawlDeps.includes(dep)) {
+                        addMissingDep(dep, result.metadata.optimized[dep].src);
+                    }
+                }
+                debouncedProcessing(0);
             } else {
                 runOptimizer(result);
             }
         } else {
             throw new Error('!postScanOptimizationResult');
         }
+    }
+
+    function debouncedProcessing(timeout = 100) {
+        setTimeout(() => {
+            if (!currentlyProcessing) {
+                runOptimizer();
+            }
+        }, timeout);
     }
 
     function prepareKnownDeps() {
@@ -229,7 +270,7 @@ const createDepsOptimizer = async (
     }
 
     async function runOptimizer(preRunResult?: any) {
-        const processingResult = preRunResult;
+        const processingResult = preRunResult ?? (await optimizeNewDeps());
         const newData = processingResult.metadata;
         const needsInteropMismatch = findInteropMismatches(metadata.discovered, newData.optimized);
         const needsReload = needsInteropMismatch.length > 0 ||
@@ -239,6 +280,15 @@ const createDepsOptimizer = async (
         // 预构建依赖优化处理完成，更新依赖缓存
         const commitProcessing = async () => {
             await processingResult.commit();
+            // 更新已发现的依赖信息
+            for (const o in newData.optimized) {
+                const discovered = metadata.discovered[o];
+                if (discovered) {
+                    const optimized = newData.optimized[o];
+                    discovered.needsInterop = optimized.needsInterop;
+                    discovered.processing = undefined
+                }
+            }
             // 执行所有的预构建处理进行，将内部的promise都resolve掉
             resolveEnqueuedProcessingPromises();
         }

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 17:25:22
+ * @LastEditTime: 2023-05-25 14:14:09
  */
 // 增加如下代码
 import path from "path";
@@ -72,3 +72,5 @@ export const DEFAULT_EXTENSIONS = [
 
 // 默认启动端口
 export const DEFAULT_DEV_PORT = 3000;
+
+export const OPTIMIZABLE_ENTRY_RE = /\.[cm]?[jt]s$/

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 20:49:28
+ * @LastEditTime: 2023-05-25 14:40:10
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -18,9 +18,20 @@ import {
 import { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
 import { esbuildDepPlugin } from "./esbuildDepPlugin";
+import { parse } from "es-module-lexer";
 
 export type OptimizeDeps = {
     entries: string[];
+}
+
+export type ExportsData = {
+    hasImports: boolean
+    // 导出名称（对于 `export { a as b }`，`b` 是导出名称）
+    exports: readonly string[]
+    facade: boolean
+    hasReExports?: boolean
+    // 提示 依赖 是否需要加载为 jsx
+    jsxLoader?: boolean
 }
 
 export interface OptimizedDepInfo {
@@ -69,10 +80,12 @@ export interface DepOptimizationMetadata {
 
 export interface DepsOptimizer {
     metadata: DepOptimizationMetadata,
+    registerMissingImport: (id: string, resolved: string) => OptimizedDepInfo
     getOptimizedDepId: (depInfo: OptimizedDepInfo) => string,
     delayDepsOptimizerUntil: (id: string, done: () => Promise<any>) => void,
     isOptimizedDepUrl: (url: string) => boolean
     isOptimizedDepFile: (id: string) => boolean
+    options: any,
     scanProcessing?: Promise<void>,
 }
 export interface DepOptimizationProcessing {
@@ -133,10 +146,14 @@ export const runOptimizeDeps = async (
      * 2. 在插件中，我们自己读取条目作为虚拟文件来保留路径。
      */
     const flatIdDeps: Record<string, string> = {};
+    const idToExports: Record<string, ExportsData> = {}
     const plugins = [];
     for (const id in depsInfo) {
         const src = depsInfo[id].src;
+        const exportsData = await (depsInfo[id].exportsData ??
+            extractExportsData(src, config));
         const flatId = flattenId(id);
+        idToExports[id] = exportsData;
         flatIdDeps[flatId] = src;
     }
     plugins.push(esbuildDepPlugin(flatIdDeps, resolvedConfig));
@@ -161,6 +178,7 @@ export const runOptimizeDeps = async (
         // 将depsInfo中的信息添加到metadata的optimized中
         addOptimizedDepInfo(metadata, 'optimized', {
             ...info,
+            needsInterop: needsInterop(idToExports[id]),
         });
     }
     const dataPath = path.join(processingCacheDir, '_metadata.json');
@@ -168,6 +186,19 @@ export const runOptimizeDeps = async (
     return processingResult;
 };
 
+const needsInterop = (
+    exportsData: any,
+): boolean => {
+    const { hasImports, exports } = exportsData
+    // 没有 ESM 语法 - 可能是 CJS 或 UMD
+    if (!exports.length && !hasImports) return true
+    return false
+}
+
+/**
+ * @author: Zhouqi
+ * @description: 序列化metadata数据
+ */
 const stringifyDepsOptimizerMetadata = (
     metadata: DepOptimizationMetadata,
     depsCacheDir: string,
@@ -263,8 +294,26 @@ export const getOptimizedDepPath = (
  * @author: Zhouqi
  * @description: 提导出的数据
  */
-export async function extractExportsData(resolved: string, config: ResolvedConfig) {
-    const exportsData = {};
+export const extractExportsData = async (filePath: string, config: ResolvedConfig) => {
+    const entryContent = fs.readFileSync(filePath, 'utf-8');
+    let parseResult;
+    let usedJsxLoader = false;
+    try {
+        parseResult = parse(entryContent);
+    } catch (e) {
+        throw new Error('extractExportsData')
+    }
+    const [imports, exports, facade] = parseResult;
+    const exportsData = {
+        hasImports: imports.length > 0,
+        exports: exports.map((e) => e.n),
+        facade,
+        hasReExports: imports.some(({ ss, se }) => {
+            const exp = entryContent.slice(ss, se);
+            return /export\s+\*\s+from/.test(exp);
+        }),
+        jsxLoader: usedJsxLoader,
+    };
     return exportsData;
 }
 
@@ -390,4 +439,17 @@ const parseDepsOptimizerMetadata = (
         })
     }
     return metadata
+}
+
+export const optimizedDepNeedsInterop = async (
+    metadata: DepOptimizationMetadata,
+    file: string,
+    config: ResolvedConfig,
+): Promise<boolean | undefined> => {
+    const depInfo = optimizedDepInfoFromFile(metadata, file);
+    if (depInfo?.src && depInfo.needsInterop === undefined) {
+        depInfo.exportsData ?? (depInfo.exportsData = extractExportsData(depInfo.src, config));
+        depInfo.needsInterop = needsInterop(await depInfo.exportsData);
+    }
+    return depInfo?.needsInterop;
 }

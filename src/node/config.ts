@@ -306,3 +306,7 @@ const loadConfigFromBundledFile = async (
         }
     }
 };
+
+export const getDepOptimizationConfig = (
+    config: ResolvedConfig,
+) => config.optimizeDeps;

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 16:38:49
+ * @LastEditTime: 2023-05-25 15:02:34
  */
 import path from "path";
 import fs from 'fs';
@@ -12,7 +12,7 @@ import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
 import { pathExists } from "fs-extra";
 import { DEFAULT_EXTERSIONS } from "../constants";
-import { bareImportRE, cleanUrl, normalizePath } from "../utils";
+import { bareImportRE, cleanUrl, isOptimizable, normalizePath } from "../utils";
 import { PackageData, resolvePackageData } from "../packages";
 import { DepsOptimizer, optimizedDepInfoFromId } from "../optimizer";
 
@@ -106,7 +106,7 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                 ) {
                     return res;
                 }
-                if ((res = tryNodeResolve(id, importer, options, true))) {
+                if ((res = tryNodeResolve(id, importer, options, true, depsOptimizer))) {
                     return res as any;
                 }
             }
@@ -128,7 +128,7 @@ export const tryOptimizedResolve = async (
     const depInfo = optimizedDepInfoFromId(metadata, id);
     if (depInfo) return depsOptimizer.getOptimizedDepId(depInfo);
     if (!importer) return;
-    console.error('error');
+    console.log('tryOptimizedResolve');
     return '';
 };
 
@@ -140,7 +140,8 @@ export const tryNodeResolve = (
     id: string,
     importer: string | null | undefined,
     options: Record<string, any>,
-    targetWeb: boolean
+    targetWeb: boolean,
+    depsOptimizer?: DepsOptimizer
 ) => {
     const { packageCache, preserveSymlinks } = options;
     // 解析斜杠资源路径 ====> import xxx from 'a/b';
@@ -207,7 +208,20 @@ export const tryNodeResolve = (
     }
     let resolved: string | undefined;
     resolved = resolveId(unresolvedId, pkg, targetWeb, options);
-    // TODO 解决构建的包副作用，以便 rollup 可以更好地执行 tree-shaking
+    if (!resolved) return;
+    // 判断是否是js类型
+    const isJsType = isOptimizable(resolved);
+    let exclude = depsOptimizer?.options.exclude;
+    // 是否跳过优化
+    const skipOptimization = !isJsType ||
+        importer?.includes('node_modules') ||
+        exclude?.includes(pkgId) ||
+        exclude?.includes(nestedPath);
+    // 运行时分析到需要优化的import依赖
+    if (!skipOptimization) {
+        const optimizedInfo = depsOptimizer?.registerMissingImport(id, resolved);
+        resolved = depsOptimizer?.getOptimizedDepId(optimizedInfo!);
+    }
     return {
         id: resolved
     };

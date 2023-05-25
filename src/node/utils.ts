@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 14:45:41
+ * @LastEditTime: 2023-05-25 14:13:46
  */
 import os from "os";
 import path from "path";
@@ -10,7 +10,7 @@ import fs from "fs";
 import { builtinModules } from 'node:module'
 import resolve from 'resolve';
 // 调试包
-import { HASH_RE, QEURY_RE, JS_TYPES_RE, CLIENT_PUBLIC_PATH, DEFAULT_EXTENSIONS } from "./constants";
+import { HASH_RE, QEURY_RE, JS_TYPES_RE, CLIENT_PUBLIC_PATH, DEFAULT_EXTENSIONS, OPTIMIZABLE_ENTRY_RE } from "./constants";
 import { TransformResult } from "esbuild";
 import MagicString from "magic-string";
 import { ResolvedConfig } from "./config";
@@ -20,6 +20,7 @@ const INTERNAL_LIST = [CLIENT_PUBLIC_PATH, "/@react-refresh"];
 export const slash = (p: string): string => p.replace(/\\/g, "/");
 export const isWindows = os.platform() === "win32";
 export const normalizePath = (id: string): string => path.posix.normalize(isWindows ? slash(id) : id);
+
 export const isJSRequest = (id: string): boolean => {
     id = cleanUrl(id);
     if (JS_TYPES_RE.test(id)) {
@@ -231,4 +232,10 @@ export const removeDir = (dir: string) => {
     // 删除 .vite/deps 时，如果不存在，nodejs 可能还会删除 .vite/ 中的其他目录，包括 .vite/deps_temp （错误）。
     // 通过在暂时删除之前检查目录是否存在来解决问题
     fs.existsSync(dir) && fs.rmSync(dir, { recursive: true, force: true })
+}
+
+export const isOptimizable = (
+    id: string,
+): boolean => {
+    return OPTIMIZABLE_ENTRY_RE.test(id);
 }

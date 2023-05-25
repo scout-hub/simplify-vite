@@ -2,9 +2,9 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-21 20:50:23
+ * @LastEditTime: 2023-05-24 21:39:44
  */
-import React from "react";
+import React,{useState} from "react";
 import ReactDOM from "react-dom/client";
 // import App from "./App";
 // import "./index.css";
@@ -16,7 +16,7 @@ import ReactDOM from "react-dom/client";
 
 const App = () => <div>hello 123546123</div>;
 
-console.log(121356);
+console.log(useState);
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <App />
