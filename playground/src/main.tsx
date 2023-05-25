@@ -2,11 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 21:39:44
+ * @LastEditTime: 2023-05-25 15:41:26
  */
-import React,{useState} from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
-// import App from "./App";
+import App from "./App";
 // import "./index.css";
 // @ts-ignore
 // import.meta.hot.accept(() => {
@@ -14,9 +14,7 @@ import ReactDOM from "react-dom/client";
 // });
 // ReactDOM.render(<App />, document.getElementById("root"));
 
-const App = () => <div>hello 123546123</div>;
-
-console.log(useState);
+// const App = () => <div>hello 123546123</div>;
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <App />

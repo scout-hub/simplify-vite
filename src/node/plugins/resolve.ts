@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 15:02:34
+ * @LastEditTime: 2023-05-25 15:40:30
  */
 import path from "path";
 import fs from 'fs';
@@ -272,9 +272,7 @@ export const resolvePackageEntry = (
     options: any
 ) => {
     const cached = getResolvedCache('.');
-    if (cached) {
-        return cached;
-    }
+    if (cached) return cached;
     let entryPoint;
     if (data.exports) {
         entryPoint = resolveExports(data, '.', options, targetWeb);
