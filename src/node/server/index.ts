@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:12:35
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 20:43:48
+ * @LastEditTime: 2023-05-26 10:29:49
  */
 // connect 是一个具有中间件机制的轻量级 Node.js 框架。
 // 既可以单独作为服务器，也可以接入到任何具有中间件机制的框架中，如 Koa、Express
@@ -11,12 +11,12 @@ import http from "node:http";
 // picocolors 是一个用来在命令行显示不同颜色文本的工具
 import { blue, green } from "picocolors";
 import { initDepsOptimizer } from "../optimizer/optimizer";
-import { createPluginContainer, PluginContainer } from "../pluginContainer";
+import { createPluginContainer, PluginContainer } from "./pluginContainer";
 import type { Plugin } from "../plugin";
 import { createDevHtmlTransformFn, indexHtmlMiddware } from "./middlewares/indexHtml";
 import { transformMiddleware } from "./middlewares/transform";
 import { staticMiddleware } from "./middlewares/static";
-import { ModuleGraph } from "../ModuleGraph";
+import { ModuleGraph } from "./ModuleGraph";
 import chokidar, { FSWatcher } from "chokidar";
 import { createWebSocketServer } from "../ws";
 import { bindingHMREvents } from "../hmr";
@@ -54,8 +54,8 @@ export const createServer = async (inlineConfig: InlineConfig = {}) => {
     const app = connect() as any;
     const httpServer = await resolveHttpServer(app);
     const pluginContainer = createPluginContainer(config);
+    // 创建模块依赖图
     const moduleGraph = new ModuleGraph((url) => pluginContainer.resolveId(url));
-
     const watcher = chokidar.watch(root, {
         ignored: ["**/node_modules/**", "**/.git/**"],
         ignoreInitial: true,

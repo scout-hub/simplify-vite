@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:28:44
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-22 15:17:43
+ * @LastEditTime: 2023-05-26 13:40:12
  */
 import type {
     LoadResult,
@@ -13,6 +13,7 @@ import type {
 } from "rollup";
 
 import { join } from "node:path";
+import { isObject } from "../utils";
 
 export interface PluginContainer {
     resolveId(id: string, importer?: string, options?: Record<string, any>): Promise<PartialResolvedId | null>;
@@ -22,7 +23,7 @@ export interface PluginContainer {
 
 // rollup 插件机制
 export const createPluginContainer = (config: Record<string, any>): PluginContainer => {
-    const { plugins, root } = config;
+    const { plugins, root, moduleGraph } = config;
     // 插件上下文对象
     // @ts-ignore 这里仅实现上下文对象的 resolve 方法
     class Context implements RollupPluginContext {
@@ -32,6 +33,7 @@ export const createPluginContainer = (config: Record<string, any>): PluginContai
             return out as ResolvedId | null;
         }
     }
+
     // 插件容器
     const pluginContainer: PluginContainer = {
         async resolveId(id: string, importer: string = join(root, 'index.html'), options: Record<string, any> = {}) {
@@ -67,11 +69,14 @@ export const createPluginContainer = (config: Record<string, any>): PluginContai
                 if (plugin.transform) {
                     const result = await plugin.transform.call(ctx, code, id);
                     if (!result) continue;
-                    if (typeof result === "string") {
+                    if (isObject(result)) {
+                        if (result.code) {
+                            code = result.code;
+                        }
+                    } else {
                         code = result;
-                    } else if (result.code) {
-                        code = result.code;
                     }
+
                 }
             }
             return { code };

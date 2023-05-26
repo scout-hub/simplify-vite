@@ -8,7 +8,7 @@ import { Plugin, build } from "esbuild";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
 import glob from 'fast-glob';
 import fs from 'node:fs';
-import { PluginContainer, createPluginContainer } from "../pluginContainer";
+import { PluginContainer, createPluginContainer } from "../server/pluginContainer";
 import { cleanUrl, dataUrlRE, externalRE, normalizePath } from "../utils";
 import path from "node:path";
 

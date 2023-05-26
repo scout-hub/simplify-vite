@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-26 09:02:56
+ * @LastEditTime: 2023-05-26 13:53:14
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -18,7 +18,8 @@ import {
     normalizePath,
     getShortName,
     isInternalRequest,
-    transformStableResult
+    transformStableResult,
+    isCSSRequest
 } from "../utils";
 import { parse as parseJS } from 'acorn';
 // magic-string 用来作字符串编辑
@@ -32,6 +33,7 @@ import { ResolvedConfig } from "../config";
 import { getDepsOptimizer } from "../optimizer/optimizer";
 import { optimizedDepNeedsInterop } from "../optimizer";
 import { makeLegalIdentifier } from '@rollup/pluginutils';
+import { ModuleNode } from '../server/ModuleGraph';
 
 const optimizedDepChunkRE = /\/chunk-[A-Z\d]{8}\.js/;
 
@@ -65,8 +67,8 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             };
             const depsOptimizer = getDepsOptimizer(config);
             const { moduleGraph } = serverContext;
-            const curMod = moduleGraph.getModuleById(importer)!;
-            const importedModules = new Set<string>();
+            const importerModule = moduleGraph.getModuleById(importer)!;
+            const importedUrls: Set<string | ModuleNode> = new Set();
             // 对每一个 import 语句依次进行分析
             for (let index = 0; index < imports.length; index++) {
                 const importInfo = imports[index];
@@ -98,16 +100,12 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                         rewriteDone = true;
                     }
                 }
-                // 第三方库: 路径重写到预构建产物的路径
-                if (BARE_IMPORT_RE.test(specifier)) {
-                    str().overwrite(modStart, modEnd, url);
-                    importedModules.add(url);
-                }
                 if (!rewriteDone) {
                     str().overwrite(modStart, modEnd, url, {
                         contentOnly: true,
                     });
                 }
+                importedUrls.add(url);
             }
             // 只对业务源码注入
             // if (!id.includes("node_modules")) {
@@ -117,6 +115,10 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             //         import.meta.hot = __vite__createHotContext(${JSON.stringify(cleanUrl(curMod.url))});`
             //     );
             // }
+
+            // 处理非css资源的模块依赖图，css的依赖关系由css插件内部处理
+            if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls);
+
             if (s) return transformStableResult(s);
             return {
                 code

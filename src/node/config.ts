@@ -11,7 +11,7 @@ import { pathToFileURL } from "node:url";
 import { resolveBuildOptions } from './build';
 import { resolvePlugins } from './plugins';
 import { PackageCache } from './packages';
-import { PluginContainer, createPluginContainer } from './pluginContainer';
+import { PluginContainer, createPluginContainer } from './server/pluginContainer';
 
 export type ResolveFn = (
     id: string,
