@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 15:40:30
+ * @LastEditTime: 2023-05-25 16:39:40
  */
 import path from "path";
 import fs from 'fs';
@@ -128,7 +128,6 @@ export const tryOptimizedResolve = async (
     const depInfo = optimizedDepInfoFromId(metadata, id);
     if (depInfo) return depsOptimizer.getOptimizedDepId(depInfo);
     if (!importer) return;
-    console.log('tryOptimizedResolve');
     return '';
 };
 

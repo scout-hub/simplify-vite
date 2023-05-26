@@ -4,7 +4,6 @@
  * @LastEditors: Zhouqi
  * @LastEditTime: 2023-05-25 15:41:26
  */
-import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 // import "./index.css";

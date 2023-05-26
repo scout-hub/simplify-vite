@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 15:19:49
+ * @LastEditTime: 2023-05-25 20:44:23
  */
 // import { build } from "esbuild";
 // import { green } from "picocolors";
@@ -55,6 +55,8 @@ const createDepsOptimizer = async (
     const cachedMetadata = loadCachedDepOptimizationMetadata(config);
     // 如果没有获取到缓存预构建依赖的信息则去创建
     let metadata = cachedMetadata || initDepsOptimizerMetadata(config);
+
+    let handle: NodeJS.Timeout | undefined;
 
     // 依赖优化器对象
     const depsOptimizer: DepsOptimizer = {
@@ -249,7 +251,10 @@ const createDepsOptimizer = async (
     }
 
     function debouncedProcessing(timeout = 100) {
-        setTimeout(() => {
+        // 加上防抖的效果，避免发现多个动态导入的依赖，从而频繁进行预构建处理
+        if (handle) clearTimeout(handle);
+        handle = setTimeout(() => {
+            handle = undefined;
             if (!currentlyProcessing) {
                 runOptimizer();
             }
@@ -258,7 +263,7 @@ const createDepsOptimizer = async (
 
     function prepareKnownDeps() {
         const knownDeps: Record<string, OptimizedDepInfo> = {}
-        // 克隆优化的信息对象，fileHash，browserHash 可能会为他们改变
+        // 克隆优化的信息对象
         for (const dep of Object.keys(metadata.optimized)) {
             knownDeps[dep] = { ...metadata.optimized[dep] }
         }
@@ -270,6 +275,8 @@ const createDepsOptimizer = async (
     }
 
     async function runOptimizer(preRunResult?: any) {
+        // 确保不会为当前发现的 deps 发出重新运行
+        if (handle) clearTimeout(handle);
         const processingResult = preRunResult ?? (await optimizeNewDeps());
         const newData = processingResult.metadata;
         const needsInteropMismatch = findInteropMismatches(metadata.discovered, newData.optimized);

@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 15:01:47
+ * @LastEditTime: 2023-05-26 09:02:56
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -52,7 +52,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             await init;
             // 解析 import 语句
             const [imports] = parse(code);
-            const ms = new MagicString(code);
             let s: MagicString | undefined;
             const str = () => s || (s = new MagicString(code));
             const normalizeUrl = async (url: string, pos: number) => {
@@ -101,7 +100,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 }
                 // 第三方库: 路径重写到预构建产物的路径
                 if (BARE_IMPORT_RE.test(specifier)) {
-                    ms.overwrite(modStart, modEnd, url);
+                    str().overwrite(modStart, modEnd, url);
                     importedModules.add(url);
                 }
                 if (!rewriteDone) {
@@ -120,9 +119,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             // }
             if (s) return transformStableResult(s);
             return {
-                code: ms.toString(),
-                // 生成 SourceMap
-                map: ms.generateMap(),
+                code
             };
         },
     };

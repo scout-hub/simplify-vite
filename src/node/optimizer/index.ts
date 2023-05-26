@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 14:40:10
+ * @LastEditTime: 2023-05-25 17:06:03
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -189,10 +189,10 @@ export const runOptimizeDeps = async (
 const needsInterop = (
     exportsData: any,
 ): boolean => {
-    const { hasImports, exports } = exportsData
+    const { hasImports, exports } = exportsData;
     // 没有 ESM 语法 - 可能是 CJS 或 UMD
-    if (!exports.length && !hasImports) return true
-    return false
+    if (!exports.length && !hasImports) return true;
+    return false;
 }
 
 /**
@@ -238,10 +238,7 @@ export const initDepsOptimizerMetadata = (
     config: ResolvedConfig,
     timestamp?: string,
 ): DepOptimizationMetadata => {
-    // const hash = getDepHash(config)
     return {
-        // hash,
-        // browserHash: getOptimizedBrowserHash(hash, {}, timestamp),
         optimized: {},
         chunks: {},
         discovered: {},
