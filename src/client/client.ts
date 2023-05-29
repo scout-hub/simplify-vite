@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-22 16:33:28
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-02-22 17:07:46
+ * @LastEditTime: 2023-05-29 14:25:49
  */
 console.log("[vite] connecting...");
 
@@ -26,10 +26,11 @@ async function handleMessage(payload: any) {
 
         case "update":
             // 进行具体的模块更新
-            payload.updates.forEach((update: any) => {
+            payload.updates.forEach(async (update: any) => {
                 if (update.type === "js-update") {
                     // 具体的更新逻辑，后续来开发
-                    fetchUpdate(update);
+                    const cb = await fetchUpdate(update);
+                    cb!();
                 }
             });
             break;

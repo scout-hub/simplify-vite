@@ -10,3 +10,5 @@ pnpm start
 - [x] 预构建依赖扫描、优化、缓存
 - [x] PluginContainer插件系统
 - [x] ModuleGraph模块依赖图
+- [x] hmr热更新
+- [x] css、js资源处理

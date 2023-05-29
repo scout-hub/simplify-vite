@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:53:40
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 09:51:09
+ * @LastEditTime: 2023-05-29 15:33:46
  */
 import { Plugin } from "../plugin";
 import { esbuildPlugin } from "./esbuild";
@@ -26,9 +26,9 @@ export function resolvePlugins(
             getDepsOptimizer: () => getDepsOptimizer(config),
         }),
         esbuildPlugin(),
+        cssPlugin(),
         clientInjectPlugin(),
         importAnalysisPlugin(config),
-        // cssPlugin(),
         // assetPlugin(),
     ];
 }

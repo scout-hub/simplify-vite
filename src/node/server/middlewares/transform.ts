@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:37:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 15:49:14
+ * @LastEditTime: 2023-05-29 15:32:25
  */
 import { NextHandleFunction } from "connect";
 import {
@@ -21,7 +21,7 @@ export function transformMiddleware(
         if (req.method !== "GET" || !req.url) {
             return next();
         }
-        const url = req.url;
+        const url = cleanUrl(req.url);
         // transform JS request
         if (isJSRequest(url) || isCSSRequest(url) || isImportRequest(url)) {
             // 核心编译函数
