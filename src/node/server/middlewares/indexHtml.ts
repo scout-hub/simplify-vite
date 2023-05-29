@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:56:58
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 11:08:21
+ * @LastEditTime: 2023-05-29 13:57:01
  */
 import path from "path";
 import fs from "fs";
@@ -27,9 +27,7 @@ const getHtmlFilename = (url: string, server: ServerContext) => {
  */
 export const createDevHtmlTransformFn = (server: ServerContext) => {
     return (url: string, html: string, originalUrl: string): Promise<string> => {
-        return applyHtmlTransforms(html, [devHtmlHook], {
-            server,
-        });
+        return applyHtmlTransforms(html);
     }
 }
 
@@ -57,21 +55,3 @@ export function indexHtmlMiddware(
         return next();
     };
 }
-
-const devHtmlHook = async (html: string, { server }: { server: ServerContext }) => {
-    const { config } = server;
-    const base = config.base || '/';
-    return {
-        html,
-        tags: [
-            {
-                tag: 'script',
-                attrs: {
-                    type: 'module',
-                    src: path.posix.join(base, CLIENT_PUBLIC_PATH),
-                },
-                injectTo: 'head-prepend',
-            },
-        ],
-    };
-};

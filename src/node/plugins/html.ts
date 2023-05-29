@@ -2,10 +2,9 @@
  * @Author: Zhouqi
  * @Date: 2023-05-17 16:45:51
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 12:00:13
+ * @LastEditTime: 2023-05-29 13:59:06
  */
 import { CLIENT_PUBLIC_PATH } from "../constants";
-import { ServerContext } from "../server";
 
 export interface HtmlTagDescriptor {
     tag: string
@@ -16,30 +15,16 @@ export interface HtmlTagDescriptor {
 
 export const applyHtmlTransforms = async (
     html: string,
-    hooks: Function[],
-    ctx: {
-        server: ServerContext
-    },
 ): Promise<string> => {
-    for (const hook of hooks) {
-        const res = await hook(html, ctx);
-        if (!res) continue;
-        let tags: HtmlTagDescriptor[] = res.tags;
-        const bodyPrependTags: HtmlTagDescriptor[] = []
-        for (const tag of tags) {
-            if (tag.injectTo === 'body-prepend') {
-                bodyPrependTags.push(tag);
-            }
-        }
-        html = injectToHead(html);
-    }
-    return html;
+    return injectToHead(html);
 };
 
 // 插入客户端脚本
 // 即在 head 标签后面加上 <script type="module" src="/@m-vite/client"></script>
-const injectToHead = (raw: string) =>
-    raw.replace(
-        /(<head[^>]*>)/i,
-        `$1<script type="module" src="${CLIENT_PUBLIC_PATH}"></script>`
-    )
+const injectToHead = (
+    raw: string,
+): string => raw.replace(
+    /(<head[^>]*>)/i,
+    `$1\n  <script type="module" src="${CLIENT_PUBLIC_PATH}"></script>`
+);
+
