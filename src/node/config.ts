@@ -4,7 +4,7 @@ import type { Plugin } from './plugin';
 import path from "path";
 import fs from "fs";
 import { build } from 'esbuild';
-import { DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
+import { DEFAULT_ASSETS_RE, DEFAULT_CONFIG_FILES, DEFAULT_EXTENSIONS } from "./constants";
 import { dynamicImport, isBuiltin, lookupFile, mergeConfig, normalizePath } from "./utils";
 import { ResolveOptions, resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 import { pathToFileURL } from "node:url";
@@ -21,7 +21,7 @@ export type ResolveFn = (
 export type ResolvedConfig = Readonly<
     Omit<UserConfig, 'plugins' | 'optimizeDeps'> & {
         configFile: string | undefined
-        base: string,
+        base: string
         inlineConfig: InlineConfig
         root: string
         cacheDir: string
@@ -30,8 +30,9 @@ export type ResolvedConfig = Readonly<
         plugins: readonly Plugin[]
         build: any
         optimizeDeps: any
-        packageCache: PackageCache,
-        server: any,
+        packageCache: PackageCache
+        server: any
+        assetsInclude: (file: string) => boolean
         createResolver: (options?: Record<string, any>) => ResolveFn
     }
 >
@@ -161,6 +162,7 @@ export const resolveConfig = async (
         packageCache: new Map(),
         createResolver,
         server,
+        assetsInclude: (file: string) => DEFAULT_ASSETS_RE.test(file),
         optimizeDeps: {
             ...optimizeDeps
         }

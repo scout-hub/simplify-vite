@@ -2,18 +2,13 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:50:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 15:38:23
+ * @LastEditTime: 2023-05-29 16:53:04
  */
 import { readFile } from "fs-extra";
-import { CLIENT_PUBLIC_PATH, CSS_LANGS_RE } from "../constants";
+import { CLIENT_PUBLIC_PATH } from "../constants";
 import { Plugin } from "../plugin";
 import { ServerContext } from "../server";
 import { getShortName } from "../utils";
-
-const directRequestRE = /(?:\?|&)direct\b/
-
-export const isDirectCSSRequest = (request: string): boolean =>
-    CSS_LANGS_RE.test(request) && directRequestRE.test(request)
 
 export function cssPlugin(): Plugin {
     let serverContext: ServerContext;

@@ -2,13 +2,9 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 10:53:16
+ * @LastEditTime: 2023-05-29 19:09:10
  */
-// import { build } from "esbuild";
-// import { green } from "picocolors";
 import { scanImports } from "./scan";
-// import { preBundlePlugin } from "./esbuildDepPlugin";
-// import { PRE_BUNDLE_DIR } from "../constants";
 import {
     initDepsOptimizerMetadata,
     runOptimizeDeps,
@@ -27,7 +23,6 @@ import {
     getDepOptimizationConfig
 
 } from "../config";
-import { emptyDir } from "../utils";
 import { green } from "picocolors";
 
 /**

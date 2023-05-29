@@ -2,12 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:37:23
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 15:32:25
+ * @LastEditTime: 2023-05-29 19:11:09
  */
 import { NextHandleFunction } from "connect";
 import {
     isJSRequest,
-    cleanUrl,
     isCSSRequest,
     isImportRequest
 } from "../../utils";
@@ -21,8 +20,7 @@ export function transformMiddleware(
         if (req.method !== "GET" || !req.url) {
             return next();
         }
-        const url = cleanUrl(req.url);
-        // transform JS request
+        const url = req.url;
         if (isJSRequest(url) || isCSSRequest(url) || isImportRequest(url)) {
             // 核心编译函数
             let result = await transformRequest(url, serverContext);

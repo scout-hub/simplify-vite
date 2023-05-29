@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 09:45:16
+ * @LastEditTime: 2023-05-29 18:55:42
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -14,7 +14,8 @@ import {
     isJSRequest,
     isInternalRequest,
     transformStableResult,
-    isCSSRequest
+    isCSSRequest,
+    isExternalUrl
 } from "../utils";
 import { parse as parseJS } from 'acorn';
 // magic-string 用来作字符串编辑
@@ -29,6 +30,15 @@ import { makeLegalIdentifier } from '@rollup/pluginutils';
 import { ModuleNode } from '../server/ModuleGraph';
 
 const optimizedDepChunkRE = /\/chunk-[A-Z\d]{8}\.js/;
+
+const isExplicitImportRequired = (url: string): boolean => !isJSRequest(cleanUrl(url)) && !isCSSRequest(url);
+
+const markExplicitImport = (url: string) => {
+    if (isExplicitImportRequired(url)) {
+        return url + '?import';
+    }
+    return url
+}
 
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
     let serverContext: ServerContext;
@@ -57,6 +67,11 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 if (id.startsWith(root + '/')) {
                     url = id.slice(root.length);
                 }
+                if (isExternalUrl(url)) {
+                    return [url, url];
+                }
+                // 对于非js和非css的资源，例如静态资源，会在在url后面加上 ?import 后缀
+                url = markExplicitImport(url);
                 return [url, id];
             };
             const depsOptimizer = getDepsOptimizer(config);

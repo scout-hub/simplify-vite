@@ -2,16 +2,14 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:56:58
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 13:57:01
+ * @LastEditTime: 2023-05-29 19:11:04
  */
 import path from "path";
 import fs from "fs";
 import { NextHandleFunction } from "connect";
 import { ServerContext } from "../";
-import { pathExists, readFile } from "fs-extra";
 import { normalizePath } from "../../utils";
 import { applyHtmlTransforms } from "../../plugins/html";
-import { CLIENT_PUBLIC_PATH } from "../../constants";
 
 /**
  * @author: Zhouqi

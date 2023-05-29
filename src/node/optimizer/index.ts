@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 10:31:46
+ * @LastEditTime: 2023-05-29 19:08:31
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -289,7 +289,7 @@ export const getOptimizedDepPath = (
 
 /**
  * @author: Zhouqi
- * @description: 提导出的数据
+ * @description: 导出的数据
  */
 export const extractExportsData = async (filePath: string, config: ResolvedConfig) => {
     const entryContent = fs.readFileSync(filePath, 'utf-8');

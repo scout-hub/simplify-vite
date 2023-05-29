@@ -2,14 +2,13 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 16:39:40
+ * @LastEditTime: 2023-05-29 18:31:03
  */
 import path from "path";
 import fs from 'fs';
 import resolve from "resolve";
 import { exports } from 'resolve.exports';
 import { Plugin } from "../plugin";
-import { ServerContext } from "../server/index";
 import { pathExists } from "fs-extra";
 import { DEFAULT_EXTERSIONS } from "../constants";
 import { bareImportRE, cleanUrl, isOptimizable, normalizePath } from "../utils";
@@ -21,14 +20,9 @@ export interface ResolveOptions {
 }
 
 export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
-    let serverContext: ServerContext;
     const { root } = resolveOptions;
     return {
         name: "m-vite:resolve",
-        configureServer(s) {
-            // 保存服务端上下文
-            serverContext = s;
-        },
         async resolveId(id: string, importer?: string, resolveOpts?: Record<string, any>) {
             const options = {
                 ...resolveOptions,
@@ -41,15 +35,11 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                 return normalizePath(path.resolve(root, id.slice(1)));;
             }
             // 1. 绝对路径
-            if (path.isAbsolute(id)) {
-                // 本身就是绝对路径，直接返回
-                if (await pathExists(id)) {
-                    return { id };
-                }
-                // 加上 root 路径前缀，处理 /src/main.tsx 的情况
-                id = path.join(serverContext.root, id);
-                if (await pathExists(id)) {
-                    return { id };
+            if (id.startsWith('/')) {
+                let res;
+                const fsPath = path.resolve(root, id.slice(1));
+                if ((res = tryFsResolve(fsPath, options))) {
+                    return res;
                 }
             }
             // 如果 importer 之前没有被 vite 的解析器解析（当 esbuild 解析它时）解析 importer 的 pkg 并添加到 idToPkgMap

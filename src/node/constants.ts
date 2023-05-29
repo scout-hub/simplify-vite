@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 15:26:30
+ * @LastEditTime: 2023-05-29 17:13:51
  */
 // 增加如下代码
 import path from "path";
@@ -49,6 +49,42 @@ export const DEFAULT_EXTERSIONS = [".tsx", ".ts", ".jsx", "js"];
 export const HMR_PORT = 24678;
 export const CLIENT_PUBLIC_PATH = "/@m-vite/client";
 export const CSS_LANGS_RE = /\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)(?:$|\?)/;
+export const KNOWN_ASSET_TYPES = [
+    // images
+    'png',
+    'jpe?g',
+    'jfif',
+    'pjpeg',
+    'pjp',
+    'gif',
+    'svg',
+    'ico',
+    'webp',
+    'avif',
+
+    // media
+    'mp4',
+    'webm',
+    'ogg',
+    'mp3',
+    'wav',
+    'flac',
+    'aac',
+
+    // fonts
+    'woff2?',
+    'eot',
+    'ttf',
+    'otf',
+
+    // other
+    'webmanifest',
+    'pdf',
+    'txt',
+];
+export const DEFAULT_ASSETS_RE = new RegExp(
+    `\\.(` + KNOWN_ASSET_TYPES.join('|') + `)(\\?.*)?$`,
+);
 
 // 默认读取的配置文件名称
 export const DEFAULT_CONFIG_FILES = [

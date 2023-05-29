@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 14:13:46
+ * @LastEditTime: 2023-05-29 19:06:36
  */
 import os from "os";
 import path from "path";
@@ -11,9 +11,7 @@ import { builtinModules } from 'node:module'
 import resolve from 'resolve';
 // 调试包
 import { HASH_RE, QEURY_RE, JS_TYPES_RE, CLIENT_PUBLIC_PATH, DEFAULT_EXTENSIONS, OPTIMIZABLE_ENTRY_RE } from "./constants";
-import { TransformResult } from "esbuild";
 import MagicString from "magic-string";
-import { ResolvedConfig } from "./config";
 
 const INTERNAL_LIST = [CLIENT_PUBLIC_PATH, "/@react-refresh"];
 
@@ -33,14 +31,13 @@ export const isJSRequest = (id: string): boolean => {
 };
 
 export const cleanUrl = (url: string): string =>
-    url.replace(HASH_RE, "").replace(QEURY_RE, "");
+    url.replace(HASH_RE, '').replace(QEURY_RE, '')
 
 export const isCSSRequest = (id: string): boolean =>
     cleanUrl(id).endsWith(".css");
 
-export function isImportRequest(url: string): boolean {
-    return url.endsWith("?import");
-}
+const importQueryRE = /(\?|&)import=?(?:&|$)/
+export const isImportRequest = (url: string): boolean => importQueryRE.test(url)
 
 export function getShortName(file: string, root: string) {
     return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
