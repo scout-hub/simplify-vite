@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:56:58
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-17 16:53:01
+ * @LastEditTime: 2023-05-29 11:08:21
  */
 import path from "path";
 import fs from "fs";
@@ -11,6 +11,7 @@ import { ServerContext } from "../";
 import { pathExists, readFile } from "fs-extra";
 import { normalizePath } from "../../utils";
 import { applyHtmlTransforms } from "../../plugins/html";
+import { CLIENT_PUBLIC_PATH } from "../../constants";
 
 /**
  * @author: Zhouqi
@@ -26,16 +27,21 @@ const getHtmlFilename = (url: string, server: ServerContext) => {
  */
 export const createDevHtmlTransformFn = (server: ServerContext) => {
     return (url: string, html: string, originalUrl: string): Promise<string> => {
-        return applyHtmlTransforms(html, []);
+        return applyHtmlTransforms(html, [devHtmlHook], {
+            server,
+        });
     }
 }
 
+/**
+ * @author: Zhouqi
+ * @description: 处理html的中间件
+ */
 export function indexHtmlMiddware(
     serverContext: ServerContext
 ): NextHandleFunction {
     return async (req, res, next) => {
         const url = req.url;
-        // next();
         if (url === "/") {
             const filename = getHtmlFilename(url, serverContext) + "/index.html";
             // 判断文件是否存在
@@ -51,3 +57,21 @@ export function indexHtmlMiddware(
         return next();
     };
 }
+
+const devHtmlHook = async (html: string, { server }: { server: ServerContext }) => {
+    const { config } = server;
+    const base = config.base || '/';
+    return {
+        html,
+        tags: [
+            {
+                tag: 'script',
+                attrs: {
+                    type: 'module',
+                    src: path.posix.join(base, CLIENT_PUBLIC_PATH),
+                },
+                injectTo: 'head-prepend',
+            },
+        ],
+    };
+};

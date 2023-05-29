@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 20:44:23
+ * @LastEditTime: 2023-05-29 10:53:16
  */
 // import { build } from "esbuild";
 // import { green } from "picocolors";
@@ -28,6 +28,7 @@ import {
 
 } from "../config";
 import { emptyDir } from "../utils";
+import { green } from "picocolors";
 
 /**
  * @author: Zhouqi
@@ -246,7 +247,17 @@ const createDepsOptimizer = async (
                 runOptimizer(result);
             }
         } else {
-            throw new Error('!postScanOptimizationResult');
+            // 没有发现需要优化的新依赖
+            if (!crawlDeps.length) {
+                console.log(
+                    green(
+                        `✨ no dependencies found while crawling the static imports`,
+                    ),
+                );
+                firstRunCalled = true;
+            } else {
+                debouncedProcessing(0);
+            }
         }
     }
 
@@ -280,10 +291,7 @@ const createDepsOptimizer = async (
         const processingResult = preRunResult ?? (await optimizeNewDeps());
         const newData = processingResult.metadata;
         const needsInteropMismatch = findInteropMismatches(metadata.discovered, newData.optimized);
-        const needsReload = needsInteropMismatch.length > 0 ||
-            Object.keys(metadata.optimized).some((dep) => {
-                return (metadata.optimized[dep].fileHash !== newData.optimized[dep].fileHash);
-            });
+        const needsReload = needsInteropMismatch.length > 0
         // 预构建依赖优化处理完成，更新依赖缓存
         const commitProcessing = async () => {
             await processingResult.commit();
@@ -301,6 +309,8 @@ const createDepsOptimizer = async (
         }
         if (!needsReload) {
             await commitProcessing();
+        } else {
+            throw new Error('needsReload');
         }
     }
 }

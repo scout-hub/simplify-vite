@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:09:25
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 22:10:57
+ * @LastEditTime: 2023-05-29 09:49:10
  */
 import { readFile } from "fs-extra";
 import { Plugin } from "../plugin";
@@ -10,9 +10,9 @@ import { isJSRequest } from "../utils";
 import { transform } from "esbuild";
 import path from "path";
 
-export function esbuildTransformPlugin(): Plugin {
+export function esbuildPlugin(): Plugin {
     return {
-        name: "m-vite:esbuild-transform",
+        name: "m-vite:esbuild",
         // 加载模块
         async load(id) {
             if (isJSRequest(id)) {

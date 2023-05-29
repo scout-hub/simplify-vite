@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-24 16:41:51
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 17:10:10
+ * @LastEditTime: 2023-05-29 09:39:44
  */
 import { promises as fs } from 'node:fs';
 import { ResolvedConfig } from "../config"
@@ -12,7 +12,7 @@ import { getDepsOptimizer } from "../optimizer/optimizer"
 // 预构建依赖插件
 export const optimizedDepsPlugin = (config: ResolvedConfig): any => {
     return {
-        name: 'vite:optimized-deps',
+        name: 'm-vite:optimized-deps',
         async resolveId(id: string) {
             // 判断是否是预构建的依赖
             if (getDepsOptimizer(config)?.isOptimizedDepFile(id)) {
@@ -29,11 +29,11 @@ export const optimizedDepsPlugin = (config: ResolvedConfig): any => {
                     // 如果info存在需要等待其预构建完成，此时磁盘中(/node_modules/m-vite/deps)已经生成了预构建结果
                     await info.processing;
                 }
-            }
-            try {
-                return await fs.readFile(id, 'utf-8');
-            } catch (error) {
-                console.log(error);
+                try {
+                    return await fs.readFile(id, 'utf-8');
+                } catch (error) {
+                    console.log(id, error);
+                }
             }
         }
     }

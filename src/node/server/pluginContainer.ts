@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 13:28:44
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-26 13:40:12
+ * @LastEditTime: 2023-05-26 14:09:48
  */
 import type {
     LoadResult,
@@ -23,7 +23,7 @@ export interface PluginContainer {
 
 // rollup 插件机制
 export const createPluginContainer = (config: Record<string, any>): PluginContainer => {
-    const { plugins, root, moduleGraph } = config;
+    const { plugins, root } = config;
     // 插件上下文对象
     // @ts-ignore 这里仅实现上下文对象的 resolve 方法
     class Context implements RollupPluginContext {

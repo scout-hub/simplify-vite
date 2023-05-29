@@ -2,21 +2,16 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-26 13:53:14
+ * @LastEditTime: 2023-05-29 09:45:16
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
 import {
-    BARE_IMPORT_RE,
     CLIENT_PUBLIC_PATH,
-    DEFAULT_EXTERSIONS,
-    PRE_BUNDLE_DIR,
 } from "../constants";
 import {
     cleanUrl,
     isJSRequest,
-    normalizePath,
-    getShortName,
     isInternalRequest,
     transformStableResult,
     isCSSRequest
@@ -27,8 +22,6 @@ import MagicString from "magic-string";
 import path from "path";
 import { Plugin } from "../plugin";
 import { ServerContext } from "../server/index";
-import { pathExists } from "fs-extra";
-import resolve from "resolve";
 import { ResolvedConfig } from "../config";
 import { getDepsOptimizer } from "../optimizer/optimizer";
 import { optimizedDepNeedsInterop } from "../optimizer";
@@ -40,6 +33,7 @@ const optimizedDepChunkRE = /\/chunk-[A-Z\d]{8}\.js/;
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
     let serverContext: ServerContext;
     const { root } = config;
+    const clientPublicPath = path.posix.join('/', CLIENT_PUBLIC_PATH);
     return {
         name: "m-vite:import-analysis",
         configureServer(s) {
@@ -69,12 +63,25 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             const { moduleGraph } = serverContext;
             const importerModule = moduleGraph.getModuleById(importer)!;
             const importedUrls: Set<string | ModuleNode> = new Set();
+            let hasHMR = false;
             // 对每一个 import 语句依次进行分析
             for (let index = 0; index < imports.length; index++) {
                 const importInfo = imports[index];
                 let { s: modStart, e: modEnd, n: specifier } = importInfo;
-                // 静态导入或动态导入中的有效字符串
-                // 如果可以解析，让我们解析它
+
+                const rawUrl = code.slice(modStart, modEnd);
+
+                // 判断模块内部是否用了hmr api
+                if (rawUrl === "import.meta") {
+                    const prop = code.slice(modEnd, modEnd + 4);
+                    if (prop === '.hot') {
+                        hasHMR = true;
+                    }
+                }
+
+                /**
+                 * 静态导入或动态导入中的有效字符串，如果可以解析，让我们解析它
+                 */
                 if (!specifier) continue;
                 const [url, resolvedId] = await normalizeUrl(specifier, modStart);
                 // 静态资源
@@ -107,14 +114,15 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 }
                 importedUrls.add(url);
             }
-            // 只对业务源码注入
-            // if (!id.includes("node_modules")) {
-            //     // 注入 HMR 相关的工具函数
-            //     ms.prepend(
-            //         `import { createHotContext as __vite__createHotContext } from "${CLIENT_PUBLIC_PATH}";
-            //         import.meta.hot = __vite__createHotContext(${JSON.stringify(cleanUrl(curMod.url))});`
-            //     );
-            // }
+
+            // 只对使用了hmr api的模块进行处理
+            if (hasHMR) {
+                // 注入 HMR 相关的工具函数
+                str().prepend(
+                    `import { createHotContext as __vite__createHotContext } from "${clientPublicPath}";` +
+                    `import.meta.hot = __vite__createHotContext(${JSON.stringify(importerModule.url)});`,
+                )
+            }
 
             // 处理非css资源的模块依赖图，css的依赖关系由css插件内部处理
             if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls);

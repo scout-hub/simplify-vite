@@ -20,6 +20,8 @@ export type ResolveFn = (
 
 export type ResolvedConfig = Readonly<
     Omit<UserConfig, 'plugins' | 'optimizeDeps'> & {
+        configFile: string | undefined
+        base: string,
         inlineConfig: InlineConfig
         root: string
         cacheDir: string
@@ -29,6 +31,7 @@ export type ResolvedConfig = Readonly<
         build: any
         optimizeDeps: any
         packageCache: PackageCache,
+        server: any,
         createResolver: (options?: Record<string, any>) => ResolveFn
     }
 >
@@ -36,6 +39,7 @@ export type ResolvedConfig = Readonly<
 export interface UserConfig {
     root?: string
     mode?: string
+    base?: string,
     optimizeDeps?: OptimizeDeps
     build?: BuildOptions
     plugins?: Plugin[]
@@ -43,7 +47,9 @@ export interface UserConfig {
     resolve?: ResolveOptions
 }
 
-export interface InlineConfig extends UserConfig { }
+export interface InlineConfig extends UserConfig {
+    configFile?: string | false
+}
 
 export interface ConfigEnv {
     command: 'build' | 'serve'
@@ -79,13 +85,23 @@ export const resolveConfig = async (
     };
     // 读取配置文件
     const loadResult = await loadConfigFromFile(configEnv);
+    let { configFile } = config
     if (loadResult) {
+        configFile = loadResult.path;
         // 合并vite默认配置和用户配置
         config = mergeConfig(loadResult.config, inlineConfig);
     }
     // --mode优先级最高，其次是用户定义的mode
     mode = inlineConfig.mode || config.mode || mode;
     configEnv.mode = mode;
+    const relativeBaseShortcut = config.base === '' || config.base === './';
+    const isBuild = command === 'build';
+    // 开发模式下默认base为/
+    const resolvedBase = relativeBaseShortcut
+        ? !isBuild
+            ? '/'
+            : './'
+        : '/'
     const resolvedRoot = normalizePath(config.root ? path.resolve(config.root) : process.cwd());
 
     // 获取vite config中的build配置
@@ -121,6 +137,9 @@ export const resolveConfig = async (
         }
     };
 
+    // TODO 解析vite config中的server配置
+    const server = {};
+
     const resolveOptions = {
         // 导入时想忽略的扩展名
         extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS,
@@ -128,6 +147,8 @@ export const resolveConfig = async (
 
     const optimizeDeps = config.optimizeDeps || {};
     const resolvedConfig: ResolvedConfig = {
+        configFile: configFile ? normalizePath(configFile) : undefined,
+        base: resolvedBase,
         root: resolvedRoot,
         build: resolvedBuildOptions,
         cacheDir,
@@ -139,6 +160,7 @@ export const resolveConfig = async (
         plugins: [],
         packageCache: new Map(),
         createResolver,
+        server,
         optimizeDeps: {
             ...optimizeDeps
         }

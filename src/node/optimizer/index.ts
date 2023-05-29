@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-16 14:06:38
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 17:06:03
+ * @LastEditTime: 2023-05-29 10:31:46
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -61,19 +61,19 @@ export interface DepOptimizationMetadata {
      */
     // browserHash: string
     /**
-     * Metadata for each already optimized dependency
+     * 每个已经优化的依赖项的元数据
      */
     optimized: Record<string, OptimizedDepInfo>
     /**
-     * Metadata for non-entry optimized chunks and dynamic imports
+     * 非入口优化块和动态导入的元数据
      */
     chunks: Record<string, OptimizedDepInfo>
     /**
-     * Metadata for each newly discovered dependency after processing
+     * 新发现的依赖项的元数据
      */
     discovered: Record<string, OptimizedDepInfo>
     /**
-     * OptimizedDepInfo list
+     * 优化后的依赖列表信息
      */
     depInfoList: OptimizedDepInfo[]
 }

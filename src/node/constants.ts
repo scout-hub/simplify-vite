@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:32:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-25 14:14:09
+ * @LastEditTime: 2023-05-29 09:08:59
  */
 // 增加如下代码
 import path from "path";
@@ -47,7 +47,7 @@ export const QEURY_RE = /\?.*$/s;
 export const HASH_RE = /#.*$/s;
 export const DEFAULT_EXTERSIONS = [".tsx", ".ts", ".jsx", "js"];
 export const HMR_PORT = 24678;
-export const CLIENT_PUBLIC_PATH = "/@vite/client";
+export const CLIENT_PUBLIC_PATH = "/@m-vite/client";
 
 // 默认读取的配置文件名称
 export const DEFAULT_CONFIG_FILES = [

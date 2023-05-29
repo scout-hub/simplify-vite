@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-21 16:39:56
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-26 13:49:15
+ * @LastEditTime: 2023-05-26 15:04:21
  */
 import { PartialResolvedId, TransformResult } from "rollup";
 import { cleanUrl } from "../utils";
