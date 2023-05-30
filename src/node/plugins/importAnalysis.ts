@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 18:55:42
+ * @LastEditTime: 2023-05-30 14:03:26
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -33,12 +33,8 @@ const optimizedDepChunkRE = /\/chunk-[A-Z\d]{8}\.js/;
 
 const isExplicitImportRequired = (url: string): boolean => !isJSRequest(cleanUrl(url)) && !isCSSRequest(url);
 
-const markExplicitImport = (url: string) => {
-    if (isExplicitImportRequired(url)) {
-        return url + '?import';
-    }
-    return url
-}
+// 对于一些静态资源，比如获取svg，img，会在请求后面加上 ?import 后缀
+const markExplicitImport = (url: string) => isExplicitImportRequired(url) ? url + '?import' : url;
 
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
     let serverContext: ServerContext;
@@ -52,9 +48,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         },
         async transform(code: string, importer: string) {
             // 只处理 JS 相关的请求
-            if (!isJSRequest(importer) || isInternalRequest(importer)) {
-                return null;
-            }
+            if (!isJSRequest(importer) || isInternalRequest(importer)) return null;
             await init;
             // 解析 import 语句
             const [imports] = parse(code);

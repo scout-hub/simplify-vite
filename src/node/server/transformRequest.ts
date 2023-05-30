@@ -2,12 +2,12 @@
  * @Author: Zhouqi
  * @Date: 2023-05-23 13:48:05
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 18:57:18
+ * @LastEditTime: 2023-05-30 11:30:56
  */
 import { green } from "picocolors";
 import type { ServerContext } from ".";
 import { getDepsOptimizer } from "../optimizer/optimizer";
-import { cleanUrl } from "../utils";
+import { cleanUrl, removeTimestampQuery } from "../utils";
 
 export async function transformRequest(
     url: string,
@@ -25,6 +25,8 @@ const doTransform = async (
     url: string,
     server: ServerContext,
 ) => {
+    // 清除url后面的时间戳，热更新重新发起请求时会带上时间戳
+    url = removeTimestampQuery(url);
     const { pluginContainer, config } = server;
     // 获取缓存的模块
     const module = await server.moduleGraph.getModuleByUrl(url);
@@ -38,7 +40,7 @@ const doTransform = async (
     const transformResult = loadAndTransform(id, url, server);
     // 处理运行过程中发现的的依赖
     getDepsOptimizer(config)?.delayDepsOptimizerUntil(id, () => transformResult);
-    return transformResult
+    return transformResult;
 };
 
 /**

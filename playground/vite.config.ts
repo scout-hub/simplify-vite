@@ -2,10 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2022-11-21 15:51:34
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-21 20:36:59
+ * @LastEditTime: 2023-05-30 15:51:48
  */
 // import path from 'path';
 import { defineConfig } from 'simplify-vite';
+const cacheDir: string = 'node_modules/.m-vite';
 // import react from '@vitejs/plugin-react';
 // import { normalizePath } from 'vite';
 // import autoprefixer from 'autoprefixer';
@@ -21,7 +22,7 @@ import { defineConfig } from 'simplify-vite';
 // console.log(a);
 export default defineConfig({
     // 指定预构建输出目录位置
-    cacheDir: 'node_modules/.m-vite',
+    cacheDir,
 });
 // https://vitejs.dev/config/
 // export default defineConfig(({ mode }) => {

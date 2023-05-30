@@ -2,11 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:09:25
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 09:49:10
+ * @LastEditTime: 2023-05-30 14:02:59
  */
 import { readFile } from "fs-extra";
 import { Plugin } from "../plugin";
-import { isJSRequest } from "../utils";
+import { cleanUrl, isJSRequest } from "../utils";
 import { transform } from "esbuild";
 import path from "path";
 

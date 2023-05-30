@@ -328,6 +328,8 @@ const loadConfigFromBundledFile = async (
             // 删除产物文件
             fs.unlinkSync(fileNameTmp);
         }
+    } else {
+        // cjs处理
     }
 };
 

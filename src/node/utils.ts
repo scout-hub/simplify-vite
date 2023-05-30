@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 19:06:36
+ * @LastEditTime: 2023-05-30 11:27:46
  */
 import os from "os";
 import path from "path";
@@ -236,3 +236,7 @@ export const isOptimizable = (
 ): boolean => {
     return OPTIMIZABLE_ENTRY_RE.test(id);
 }
+
+const timestampRE = /\bt=\d{13}&?\b/;
+const trailingSeparatorRE = /[?&]$/;
+export const removeTimestampQuery = (url: string): string => url.replace(timestampRE, '').replace(trailingSeparatorRE, '');
