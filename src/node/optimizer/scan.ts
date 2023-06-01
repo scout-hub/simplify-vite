@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-23 21:32:01
+ * @LastEditTime: 2023-06-01 13:22:09
  */
 import { Plugin, build } from "esbuild";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
@@ -152,52 +152,10 @@ const esbuildScanPlugin = (
                 external: true,
             }));
 
-            // base64资源不做处理
-            build.onResolve({ filter: dataUrlRE }, ({ path }: any) => ({
-                path,
-                external: true,
-            }));
-
-            // 对html vue等文件处理
-            build.onResolve({ filter: htmlTypesRE }, async ({ path, importer }: any) => {
-                const resolved = await resolve(path, importer);
-                return {
-                    path: resolved,
-                    namespace: 'html',
-                };
-            });
-
-            // 对html内容处理
-            build.onLoad({ filter: htmlTypesRE, namespace: 'html' }, async ({ path }: any) => {
-                // 读取文件内容
-                let raw = fs.readFileSync(path, 'utf-8');
-                // 去除注释中的内容
-                raw = raw.replace(commentRE, '<!---->');
-                let match;
-                while ((match = scriptModuleRE.exec(raw))) {
-                    const [, openTag] = match;
-                    // 获取script中的src标记
-                    const srcMatch = openTag.match(srcRE);
-                    let js = '';
-                    if (srcMatch) {
-                        const src = srcMatch[1] || srcMatch[2] || srcMatch[3];
-                        js += `import ${JSON.stringify(src)}\n`;
-                    }
-                    // 将script引入方式转换为import方式
-                    js += '\nexport default {}';
-                    // 通过js的方式去解析
-                    return {
-                        loader: 'js',
-                        contents: js,
-                    };
-                }
-            });
-
             // 所有import的文件处理
             build.onResolve({
-                // avoid matching windows volume
                 filter: /^[\w@][^:]/,
-            }, async ({ path: id, importer, pluginData }: any) => {
+            }, async ({ path: id, importer }: any) => {
                 // 已经处理过的同一个资源直接返回
                 if (depImports[id]) {
                     return externalUnlessEntry({ path: id });
@@ -210,36 +168,6 @@ const esbuildScanPlugin = (
                     }
                 }
             });
-
-            // 其它文件处理
-            build.onResolve({
-                filter: /.*/,
-            }, async ({ path: id, importer }: any) => {
-                // 调用vite内部的resolve插件进行路径解析
-                const resolved = await resolve(id, importer);
-                if (resolved) {
-                    return {
-                        path: path.resolve(cleanUrl(resolved)),
-                    };
-                }
-                return externalUnlessEntry({ path: id });
-            });
-
-            // 其它文件处理
-            build.onLoad({
-                filter: JS_TYPES_RE,
-            }, async ({ path: id }: any) => {
-                // 获取文件后缀
-                let ext = path.extname(id).slice(1);
-                // 读取文件内容
-                let contents = fs.readFileSync(id, 'utf-8');
-                // 根据文件后缀决定使用什么loader
-                const loader = ext;
-                return {
-                    contents,
-                    loader
-                }
-            });
         }
     }
 };
@@ -248,8 +176,8 @@ const esbuildScanPlugin = (
  * @author: Zhouqi
  * @description: 遍历文件入口
  */
-const globEntries = (pattern: string | string[], config: Record<string, any>) => {
-    return glob(pattern, {
+const globEntries = (pattern: string | string[], config: Record<string, any>) =>
+    glob(pattern, {
         cwd: config.root,
         // 忽略的文件 node_modules 输出目录
         ignore: [
@@ -263,7 +191,7 @@ const globEntries = (pattern: string | string[], config: Record<string, any>) =>
         // 返回条目的绝对路径
         absolute: true,
     })
-}
+
 
 /**
  * @author: Zhouqi

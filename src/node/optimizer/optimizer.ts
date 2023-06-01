@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-30 13:57:18
+ * @LastEditTime: 2023-05-31 10:25:54
  */
 import { scanImports } from "./scan";
 import {
@@ -63,7 +63,6 @@ const createDepsOptimizer = async (
         isOptimizedDepFile: (id: string) => isOptimizedDepFile(id, config),
         isOptimizedDepUrl: createIsOptimizedDepUrl(config),
         options: getDepOptimizationConfig(config),
-
     };
 
     // 将预构建优化器对象存入map中
