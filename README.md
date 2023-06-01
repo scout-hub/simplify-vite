@@ -1,8 +1,18 @@
+<!--
+ * @Author: Zhouqi
+ * @Date: 2023-05-26 10:23:41
+ * @LastEditors: Zhouqi
+ * @LastEditTime: 2023-06-01 20:29:23
+-->
 # simplify-vite
-### a simplified version of vite implementation for study
+### 通过一步步实现简单的vite来学习vite的核心原理
+
+### 内容输出 
+docs
 
 ### 开发
 pnpm start
+
 
 ### 目前实现的功能
 - [x] 本地开发服务
