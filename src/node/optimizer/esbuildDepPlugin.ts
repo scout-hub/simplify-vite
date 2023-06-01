@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:48:11
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-24 16:43:39
+ * @LastEditTime: 2023-06-01 17:23:30
  */
 import type { Loader, Plugin } from "esbuild";
 import { BARE_IMPORT_RE } from "../constants";

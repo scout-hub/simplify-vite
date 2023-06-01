@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 18:31:03
+ * @LastEditTime: 2023-06-01 17:14:23
  */
 import path from "path";
 import fs from 'fs';
@@ -99,6 +99,10 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                 if ((res = tryNodeResolve(id, importer, options, true, depsOptimizer))) {
                     return res as any;
                 }
+            }
+            // 已经是绝对路径则直接返回，例如入口的index.html
+            if (path.isAbsolute(id)) {
+                return id;
             }
             return null;
         },

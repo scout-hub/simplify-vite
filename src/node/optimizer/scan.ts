@@ -2,10 +2,10 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-01 13:22:09
+ * @LastEditTime: 2023-06-01 17:35:50
  */
 import { Plugin, build } from "esbuild";
-import { BARE_IMPORT_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
+import { BARE_IMPORT_RE, CSS_LANGS_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
 import glob from 'fast-glob';
 import fs from 'node:fs';
 import { PluginContainer, createPluginContainer } from "../server/pluginContainer";
@@ -146,11 +146,40 @@ const esbuildScanPlugin = (
     return {
         name: 'vite:dep-scan',
         setup(build: any) {
-            // http/https开头的外部请求资源不做处理
-            build.onResolve({ filter: externalRE }, ({ path }: any) => ({
-                path,
-                external: true,
-            }));
+            // 对html vue等文件处理
+            build.onResolve({ filter: htmlTypesRE }, async ({ path, importer }: any) => {
+                const resolved = await resolve(path, importer);
+                return {
+                    path: resolved,
+                    namespace: 'html',
+                };
+            });
+
+            // 对模版内容处理，将内部引用的资源通过ESM的方式导入，否则会报错
+            build.onLoad({ filter: htmlTypesRE, namespace: 'html' }, async ({ path }: any) => {
+                // 读取文件内容
+                let raw = fs.readFileSync(path, 'utf-8');
+                // 去除注释中的内容
+                raw = raw.replace(commentRE, '<!---->');
+                let match;
+                let js = '';
+                while ((match = scriptModuleRE.exec(raw))) {
+                    const [, openTag] = match;
+                    // 获取script中的src标记
+                    const srcMatch = openTag.match(srcRE);
+                    if (srcMatch) {
+                        const src = srcMatch[1] || srcMatch[2] || srcMatch[3];
+                        js += `import ${JSON.stringify(src)}\n`;
+                    }
+                    // 将script引入方式转换为import方式
+                    js += '\nexport default {}';
+                }
+                // 通过js的方式去解析
+                return {
+                    loader: 'js',
+                    contents: js,
+                };
+            });
 
             // 所有import的文件处理
             build.onResolve({
@@ -167,6 +196,23 @@ const esbuildScanPlugin = (
                         return externalUnlessEntry({ path: id });
                     }
                 }
+            });
+
+            // 忽略css文件
+            build.onResolve({ filter: CSS_LANGS_RE }, externalUnlessEntry);
+
+            // 通配处理
+            build.onResolve({
+                filter: /.*/,
+            }, async ({ path: id, importer }: any) => {
+                // 调用vite内部的resolve插件进行路径解析
+                const resolved = await resolve(id, importer);
+                if (resolved) {
+                    return {
+                        path: path.resolve(cleanUrl(resolved)),
+                    };
+                }
+                return externalUnlessEntry({ path: id });
             });
         }
     }
