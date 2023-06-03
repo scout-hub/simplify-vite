@@ -1,9 +1,3 @@
-<!--
- * @Author: Zhouqi
- * @Date: 2023-06-01 19:55:48
- * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-01 19:55:49
--->
 # vite核心原理（二）—— 预构建优化
 
 
@@ -56,6 +50,7 @@ export const initDepsOptimizer = async (
 - 第三步：创建优化器对象depsOptimizer并存到全局的depsOptimizerMap中，这个对象上存储着预构建产物信息和相关操作方法
 - 第四步：创建一个预构建处理任务对象，其实就是一个包含promise实例和resolve方法的对象，这个promise的作用是确保在获取预构建产物之前预构建已经完成。只有当预构建完成后才会执行resolveEnqueuedProcessingPromises方法，将等待中的promise全部resolve，之后才能进行接下去的产物获取过程 —— newDepOptimizationProcessing
 - 第五步：增加控制变量currentlyProcessing和firstRunCalled。
+
   currentlyProcessing：标记是否正在进行预构建任务，预构建不一定是在第一次启动服务的时候才会执行，在浏览器访问资源的时候也有可能会发生多次预构建，这样就会发起多个任务。在第四步里面提到，浏览器要访问预构建资源时必须要等到预构建任务完成。因此，如果这种预构建任务过多会阻塞资源的获取，浏览器会长时间处于loading状态。这种短时间多次执行相同操作的解决方式也很常见，比如防抖、节流，或者用一个变量控制，当任务处于执行状态时，后续任务不再执行，这里的currentlyProcessing就有类似作用
 
   firstRunCalled：标记是否已经运行过一次程序，这个运行是指通过浏览器去访问程序

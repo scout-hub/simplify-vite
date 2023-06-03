@@ -1,9 +1,3 @@
-<!--
- * @Author: Zhouqi
- * @Date: 2023-06-01 20:00:30
- * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-01 20:00:31
--->
 # vite核心原理（一）—— 本地服务及配置解析
 
 
