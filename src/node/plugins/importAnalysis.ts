@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-30 14:03:26
+ * @LastEditTime: 2023-06-05 19:53:01
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -49,6 +49,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         async transform(code: string, importer: string) {
             // 只处理 JS 相关的请求
             if (!isJSRequest(importer) || isInternalRequest(importer)) return null;
+            // 必须在parse前调用
             await init;
             // 解析 import 语句
             const [imports] = parse(code);
@@ -93,13 +94,10 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                  */
                 if (!specifier) continue;
                 const [url, resolvedId] = await normalizeUrl(specifier, modStart);
-                // 静态资源
-                // if (specifier.endsWith(".svg")) {
-                //     // 加上 ?import 后缀
-                //     const resolvedUrl = path.join(path.dirname(importer), specifier);
-                //     ms.overwrite(modStart, modEnd, `${resolvedUrl}?import`);
-                //     continue;
+                // if (rawUrl.indexOf('App') !== -1) {
+                //     console.log([url, resolvedId]);
                 // }
+                // 静态资源
                 let rewriteDone = false;
                 /**
                  * 对于优化的 cjs deps，通过将命名导入重写为 const 赋值来支持命名导入
@@ -120,6 +118,9 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                     str().overwrite(modStart, modEnd, url, {
                         contentOnly: true,
                     });
+                    // if (rawUrl.indexOf('App') !== -1) {
+                    //     console.log(str().toString());
+                    // }
                 }
                 importedUrls.add(url);
             }

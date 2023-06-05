@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 14:50:16
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-01 17:14:23
+ * @LastEditTime: 2023-06-05 20:08:26
  */
 import path from "path";
 import fs from 'fs';
@@ -42,7 +42,6 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                     return res;
                 }
             }
-            // 如果 importer 之前没有被 vite 的解析器解析（当 esbuild 解析它时）解析 importer 的 pkg 并添加到 idToPkgMap
             // 2. 相对路径
             else if (id.startsWith(".")) {
                 if (!importer) {
@@ -55,34 +54,6 @@ export function resolvePlugin(resolveOptions: Record<string, any>): Plugin {
                     return {
                         id: res,
                     };
-                }
-                const hasExtension = path.extname(id).length > 1;
-                let resolvedId: string;
-                // 2.1 包含文件名后缀
-                // 如 ./App.tsx
-                if (hasExtension) {
-                    resolvedId = normalizePath(resolve.sync(id, { basedir: path.dirname(importer) }));
-                    if (await pathExists(resolvedId)) {
-                        return { id: resolvedId };
-                    }
-                }
-                // 2.2 不包含文件名后缀
-                // 如 ./App
-                else {
-                    // ./App -> ./App.tsx
-                    for (const extname of DEFAULT_EXTERSIONS) {
-                        try {
-                            const withExtension = `${id}${extname}`;
-                            resolvedId = normalizePath(resolve.sync(withExtension, {
-                                basedir: path.dirname(importer),
-                            }));
-                            if (await pathExists(resolvedId)) {
-                                return { id: resolvedId };
-                            }
-                        } catch (e) {
-                            continue;
-                        }
-                    }
                 }
             }
             // 外部包的导入
@@ -304,12 +275,12 @@ const resolveExports = (
 
 const tryFsResolve = (fsPath: string, options: any) => {
     let res;
-    if ((res = tryResolveFile(fsPath, '', options))) {
+    if ((res = tryResolveFile(fsPath, options))) {
         return res;
     }
     // 尝试添加后缀名获取文件
     for (const ext of options.extensions) {
-        if (res = tryResolveFile(fsPath + ext, '', options)) {
+        if (res = tryResolveFile(fsPath + ext, options)) {
             return res;
         }
     }
@@ -321,12 +292,12 @@ const tryFsResolve = (fsPath: string, options: any) => {
  */
 const tryResolveFile = (
     file: string,
-    postfix: string,
     options: any
 ) => {
     let stat;
     try {
         // 获取文件信息，判断文件是否存在
+        // throwIfNoEntry找不到文件时防止错误抛出
         stat = fs.statSync(file, { throwIfNoEntry: false });
     }
     catch {
@@ -334,7 +305,7 @@ const tryResolveFile = (
     }
     // 如果文件存在则获取文件的真实路径
     if (stat) {
-        return getRealPath(file, options.preserveSymlinks) + postfix;
+        return getRealPath(file, options.preserveSymlinks);
     }
 }
 

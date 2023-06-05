@@ -2,11 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:09:25
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-30 14:02:59
+ * @LastEditTime: 2023-06-05 17:27:22
  */
 import { readFile } from "fs-extra";
 import { Plugin } from "../plugin";
-import { cleanUrl, isJSRequest } from "../utils";
+import { isJSRequest } from "../utils";
 import { transform } from "esbuild";
 import path from "path";
 
@@ -33,16 +33,11 @@ export function esbuildPlugin(): Plugin {
                 }
                 const { code: transformedCode, map } = await transform(code, {
                     charset: 'utf8',
-                    keepNames: false,
                     loader: extname as "js" | "ts" | "jsx" | "tsx",
-                    minify: false,
                     sourcefile: id,
                     target: "esnext",
                     format: "esm",
                     sourcemap: true,
-                    minifyIdentifiers: false,
-                    minifySyntax: false,
-                    minifyWhitespace: false,
                     treeShaking: false,
                     tsconfigRaw: {
                         compilerOptions

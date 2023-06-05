@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-21 16:39:56
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-03 21:45:12
+ * @LastEditTime: 2023-06-04 20:44:10
  */
 import { PartialResolvedId, TransformResult } from "rollup";
 import { cleanUrl } from "../utils";
@@ -71,7 +71,7 @@ export class ModuleGraph {
                     ? await this.ensureEntryFromUrl(cleanUrl(curImports))
                     : curImports;
             // 构建双向依赖关系
-            if (dep) {
+            if (dep) {8
                 // 当前模块的importedModules中添加依赖
                 mod.importedModules.add(dep);
                 // 在依赖节点的importers中添加当前模块
