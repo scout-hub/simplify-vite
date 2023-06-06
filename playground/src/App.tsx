@@ -2,17 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-05 20:02:07
+ * @LastEditTime: 2023-06-06 16:03:56
  */
 import { useState } from "react";
 import logo from "./logo.svg";
 import "./App.css";
-
-// @ts-ignore
-import.meta.hot.accept(() => {
-  console.log(12345678);
-});
-
 function App() {
   const [count, setCount] = useState(0);
 

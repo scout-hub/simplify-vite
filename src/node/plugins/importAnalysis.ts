@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-05 19:53:01
+ * @LastEditTime: 2023-06-06 15:51:05
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -94,9 +94,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                  */
                 if (!specifier) continue;
                 const [url, resolvedId] = await normalizeUrl(specifier, modStart);
-                // if (rawUrl.indexOf('App') !== -1) {
-                //     console.log([url, resolvedId]);
-                // }
                 // 静态资源
                 let rewriteDone = false;
                 /**
@@ -112,15 +109,15 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                     if (needsInterop) {
                         interopNamedImports(str(), imports[index], url, index);
                         rewriteDone = true;
+                        // if (url === '/node_modules/.m-vite/deps/react.js') {
+                        //     console.log(str().toString());
+                        // }
                     }
                 }
                 if (!rewriteDone) {
                     str().overwrite(modStart, modEnd, url, {
                         contentOnly: true,
                     });
-                    // if (rawUrl.indexOf('App') !== -1) {
-                    //     console.log(str().toString());
-                    // }
                 }
                 importedUrls.add(url);
             }
