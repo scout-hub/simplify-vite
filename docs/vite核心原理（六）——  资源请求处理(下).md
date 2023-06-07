@@ -1,9 +1,3 @@
-<!--
- * @Author: Zhouqi
- * @Date: 2023-06-07 16:36:58
- * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-07 16:36:59
--->
 # vite核心原理（六）——  资源请求处理(下)
 
 

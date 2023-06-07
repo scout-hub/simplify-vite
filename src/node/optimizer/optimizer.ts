@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-07 15:16:00
+ * @LastEditTime: 2023-06-07 16:47:56
  */
 import { scanImports } from "./scan";
 import {
@@ -286,7 +286,7 @@ const createDepsOptimizer = async (
         const processingResult = preRunResult ?? (await optimizeNewDeps());
         const newData = processingResult.metadata;
         const needsInteropMismatch = findInteropMismatches(metadata.discovered, newData.optimized);
-        const needsReload = needsInteropMismatch.length > 0
+        const needsReload = needsInteropMismatch.length > 0;
         // 预构建依赖优化处理完成，更新依赖缓存
         const commitProcessing = async () => {
             await processingResult.commit();

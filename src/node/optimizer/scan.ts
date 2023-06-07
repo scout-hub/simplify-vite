@@ -2,10 +2,10 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:30:42
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-01 17:35:50
+ * @LastEditTime: 2023-06-07 20:41:10
  */
 import { Plugin, build } from "esbuild";
-import { BARE_IMPORT_RE, CSS_LANGS_RE, EXTERNAL_TYPES, JS_TYPES_RE } from "../constants";
+import { BARE_IMPORT_RE, CSS_LANGS_RE, EXTERNAL_TYPES, JS_TYPES_RE, KNOWN_ASSET_TYPES } from "../constants";
 import glob from 'fast-glob';
 import fs from 'node:fs';
 import { PluginContainer, createPluginContainer } from "../server/pluginContainer";
@@ -200,6 +200,11 @@ const esbuildScanPlugin = (
 
             // 忽略css文件
             build.onResolve({ filter: CSS_LANGS_RE }, externalUnlessEntry);
+
+            // 忽略静态资源文件
+            build.onResolve({
+                filter: new RegExp(`\\.(${KNOWN_ASSET_TYPES.join('|')})$`)
+            }, externalUnlessEntry)
 
             // 通配处理
             build.onResolve({
