@@ -2,10 +2,10 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-06 16:03:56
+ * @LastEditTime: 2023-06-07 14:51:48
  */
 import { useState } from "react";
-import logo from "./logo.svg";
+// import logo from "./logo.svg";
 import "./App.css";
 function App() {
   const [count, setCount] = useState(0);
@@ -13,7 +13,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img className="App-logo" src={logo} alt="" />
+        {/* <img className="App-logo" src={logo} alt="" /> */}
         <p>Hello Vite + React</p>
         <p>
           <button type="button" onClick={() => setCount((count) => count + 1)}>

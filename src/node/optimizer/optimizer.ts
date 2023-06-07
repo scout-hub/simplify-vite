@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 10:53:39
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-31 10:25:54
+ * @LastEditTime: 2023-06-07 15:16:00
  */
 import { scanImports } from "./scan";
 import {
@@ -166,6 +166,7 @@ const createDepsOptimizer = async (
     let seenIds = new Set<string>();
     let waitingOn: string | undefined;
 
+    // 延迟依赖优化直到条件满足
     function delayDepsOptimizerUntil(id: string, done: () => Promise<any>): void {
         // 运行过程中发现的依赖，非预构建阶段发现的依赖
         if (!depsOptimizer.isOptimizedDepFile(id) && !seenIds.has(id)) {
