@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-06 15:51:05
+ * @LastEditTime: 2023-06-09 11:00:48
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -74,6 +74,8 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             const importerModule = moduleGraph.getModuleById(importer)!;
             const importedUrls: Set<string | ModuleNode> = new Set();
             let hasHMR = false;
+            let isSelfAccepting = false
+
             // 对每一个 import 语句依次进行分析
             for (let index = 0; index < imports.length; index++) {
                 const importInfo = imports[index];
@@ -86,6 +88,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                     const prop = code.slice(modEnd, modEnd + 4);
                     if (prop === '.hot') {
                         hasHMR = true;
+                        if (code.slice(modEnd + 4, modEnd + 11) === '.accept') isSelfAccepting = true;
                     }
                 }
 
@@ -132,7 +135,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             }
 
             // 处理非css资源的模块依赖图，css的依赖关系由css插件内部处理
-            if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls);
+            if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls, isSelfAccepting);
 
             if (s) return transformStableResult(s);
             return {

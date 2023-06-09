@@ -115,6 +115,7 @@ export class ModuleGraph {
 - transformResult：当前模块代码转化的结果
 - lastHMRTimestamp：上一次热更新的时间
 - isSelfAccepting：是否接受自身热更新
+- type：模块资源类型js | css
 
 ```typescript
 // node/server/ModuleGraph.ts
@@ -129,7 +130,9 @@ export class ModuleNode {
     transformResult: TransformResult | null = null;
     lastHMRTimestamp = 0;
     isSelfAccepting = false;
+    type: 'js' | 'css';
     constructor(url: string) {
+				this.type = isDirectCSSRequest(url) ? 'css' : 'js';
         this.url = url;
     }
 }
@@ -208,7 +211,7 @@ async ensureEntryFromUrl(rawUrl: string): Promise<ModuleNode> {
 
 在资源import分析阶段会绑定模块之间依赖关系，具体绑定过程由updateModuleInfo方法实现。该插件的具体逻辑会在后续资源请求部分介绍，这里主要关注updateModuleInfo方法：
 
-1. 根据新的依赖绑定依赖关系
+1. 根据新的依赖绑定依赖关系，这里涉及到importerModule和importedUrls。importerModule即引入当前模块的模块节点，可以用 importer 去获取；importedUrls即依赖的资源路径，这个路径根据 parse 分析后通过 normalizeUrl 转换得到
 2. 根据旧的依赖信息删除不需要的依赖
 
 ```typescript
@@ -220,6 +223,14 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         // 省略其它代码
         async transform(code: string, importer: string) {
 	          // 省略其它代码
+          	const [imports] = parse(code);
+            const importerModule = moduleGraph.getModuleById(importer)!;
+            const importedUrls: Set<string | ModuleNode> = new Set();
+            for (let index = 0; index < imports.length; index++) {
+              // 省略其它代码
+              const [url, resolvedId] = await normalizeUrl(specifier, modStart);
+							importedUrls.add(url);
+            }
             // 处理非css资源的模块依赖图，css的依赖关系由css插件内部处理
             if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls);
          	  // 省略其它代码

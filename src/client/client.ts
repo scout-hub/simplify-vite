@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-22 16:33:28
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 14:25:49
+ * @LastEditTime: 2023-06-09 13:28:37
  */
 console.log("[vite] connecting...");
 
@@ -21,19 +21,25 @@ async function handleMessage(payload: any) {
         case "connected":
             console.log(`[vite] connected.`);
             // 心跳检测
-            setInterval(() => socket.send("ping"), 1000);
+            // setInterval(() => socket.send("ping"), 1000);
             break;
 
-        case "update":
+        case "update": {
             // 进行具体的模块更新
             payload.updates.forEach(async (update: any) => {
                 if (update.type === "js-update") {
-                    // 具体的更新逻辑，后续来开发
                     const cb = await fetchUpdate(update);
+                    // 执行热重载回调
                     cb!();
                 }
             });
             break;
+        }
+        case "full-reload": {
+            // 全量刷新
+            location.reload();
+            break;
+        }
     }
 }
 
@@ -87,7 +93,7 @@ export const createHotContext = (ownerPath: string) => {
     };
 };
 
-async function fetchUpdate({ path, timestamp }: any) {
+async function fetchUpdate({ path, timestamp, acceptedPath }: any) {
     const mod = hotModulesMap.get(path);
     if (!mod) return;
 

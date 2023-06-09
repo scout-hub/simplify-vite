@@ -2,10 +2,10 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:50:31
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-29 16:53:04
+ * @LastEditTime: 2023-06-09 11:18:18
  */
 import { readFile } from "fs-extra";
-import { CLIENT_PUBLIC_PATH } from "../constants";
+import { CLIENT_PUBLIC_PATH, CSS_LANGS_RE } from "../constants";
 import { Plugin } from "../plugin";
 import { ServerContext } from "../server";
 import { getShortName } from "../utils";
@@ -48,3 +48,5 @@ export function cssPlugin(): Plugin {
         },
     };
 }
+
+export const isDirectCSSRequest = (request: string): boolean => CSS_LANGS_RE.test(request) 
