@@ -2,11 +2,12 @@
  * @Author: Zhouqi
  * @Date: 2023-02-21 16:39:56
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-09 11:18:42
+ * @LastEditTime: 2023-06-12 19:28:20
  */
 import { PartialResolvedId, TransformResult } from "rollup";
-import { cleanUrl } from "../utils";
+import { cleanUrl, removeImportQuery, removeTimestampQuery } from "../utils";
 import { isDirectCSSRequest } from "../plugins/css";
+import { extname } from "node:path";
 
 export class ModuleNode {
     // 资源访问 url
@@ -19,6 +20,7 @@ export class ModuleNode {
     transformResult: TransformResult | null = null;
     lastHMRTimestamp = 0;
     isSelfAccepting = false;
+    acceptedHmrDeps = new Set<ModuleNode>();
     type: 'js' | 'css';
     constructor(url: string) {
         this.type = isDirectCSSRequest(url) ? 'css' : 'js'
@@ -50,13 +52,15 @@ export class ModuleGraph {
      */
     async ensureEntryFromUrl(rawUrl: string): Promise<ModuleNode> {
         const { url, resolvedId } = await this._resolve(rawUrl);
-        // 首先检查缓存，缓存存在则直接返回
-        if (this.urlToModuleMap.has(url)) return this.urlToModuleMap.get(url) as ModuleNode;
-        // 若无缓存，创建依赖节点并更新 urlToModuleMap 和 idToModuleMap
-        const mod = new ModuleNode(url);
-        mod.id = resolvedId;
-        this.urlToModuleMap.set(url, mod);
-        this.idToModuleMap.set(resolvedId, mod);
+        let mod = this.idToModuleMap.get(resolvedId);
+        // 检查缓存
+        if (!mod) {
+            mod = new ModuleNode(url);
+            mod.id = resolvedId;
+            this.idToModuleMap.set(resolvedId, mod);
+        } else if (!this.urlToModuleMap.has(url)) {
+            this.urlToModuleMap.set(url, mod)
+        }
         return mod;
     }
 
@@ -67,7 +71,8 @@ export class ModuleGraph {
     async updateModuleInfo(
         mod: ModuleNode,
         importedModules: Set<string | ModuleNode>,
-        isSelfAccepting: boolean
+        acceptedModules: Set<string | ModuleNode>,
+        isSelfAccepting: boolean,
     ) {
         mod.isSelfAccepting = isSelfAccepting;
         const prevImports = mod.importedModules;
@@ -90,6 +95,16 @@ export class ModuleGraph {
                 prevImport.importers.delete(mod);
             }
         }
+
+        // 更新接受更新的模块
+        const deps = (mod.acceptedHmrDeps = new Set());
+        for (const accepted of acceptedModules) {
+            const dep =
+                typeof accepted === 'string'
+                    ? await this.ensureEntryFromUrl(accepted)
+                    : accepted
+            deps.add(dep)
+        }
     }
 
     /**
@@ -110,17 +125,34 @@ export class ModuleGraph {
         mod.lastHMRTimestamp = Date.now();
         // 清除代码转换结果
         mod.transformResult = null;
-        // 引用当前模块的模块也需要清除缓存
+        // 引用当前模块的模块如果不接受当前模块的更新，也需要清除缓存
         mod.importers.forEach((importer) => {
-            this.invalidateModule(importer);
+            if (!importer.acceptedHmrDeps.has(mod)) {
+                this.invalidateModule(importer);
+            }
         });
     }
 
-    private async _resolve(
+    async _resolve(
         url: string
     ): Promise<{ url: string; resolvedId: string }> {
         const resolved = await this.resolveId(url);
         const resolvedId = resolved?.id || url;
         return { url, resolvedId };
+    }
+
+    async resolveUrl(url: string) {
+        url = removeImportQuery(removeTimestampQuery(url));
+        const resolved = await this.resolveId(url);
+        const resolvedId = resolved?.id || url;
+        // 说明可能缺少了后缀等信息
+        if (url !== resolvedId) {
+            const ext = extname(cleanUrl(resolvedId));
+            const { pathname, search, hash } = new URL(url, 'relative://');
+            if (ext && !pathname!.endsWith(ext)) {
+                url = pathname + ext + search + hash;
+            }
+        }
+        return [url, resolvedId];
     }
 }

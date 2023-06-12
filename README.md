@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-05-26 10:23:41
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-01 20:29:23
+ * @LastEditTime: 2023-06-09 13:41:09
 -->
 # simplify-vite
 ### 通过一步步实现简单的vite来学习vite的核心原理
@@ -21,4 +21,4 @@ pnpm start
 - [x] PluginContainer插件系统
 - [x] ModuleGraph模块依赖图
 - [x] hmr热更新
-- [x] css、js资源处理
+- [x] css、js、其它静态资源请求处理

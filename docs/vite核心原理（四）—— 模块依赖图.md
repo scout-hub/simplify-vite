@@ -1,3 +1,9 @@
+<!--
+ * @Author: Zhouqi
+ * @Date: 2023-06-12 18:54:24
+ * @LastEditors: Zhouqi
+ * @LastEditTime: 2023-06-12 18:54:25
+-->
 # vite核心原理（四）—— 模块依赖图
 
 
@@ -43,23 +49,28 @@ export class ModuleGraph {
      */
     async ensureEntryFromUrl(rawUrl: string): Promise<ModuleNode> {
         const { url, resolvedId } = await this._resolve(rawUrl);
-        // 首先检查缓存，缓存存在则直接返回
-        if (this.urlToModuleMap.has(url)) return this.urlToModuleMap.get(url) as ModuleNode;
-        // 若无缓存，创建依赖节点并更新 urlToModuleMap 和 idToModuleMap
-        const mod = new ModuleNode(url);
-        mod.id = resolvedId;
-        this.urlToModuleMap.set(url, mod);
-        this.idToModuleMap.set(resolvedId, mod);
+        let mod = this.idToModuleMap.get(resolvedId);
+        // 检查缓存
+        if (!mod) {
+            mod = new ModuleNode(url);
+            mod.id = resolvedId;
+            this.idToModuleMap.set(resolvedId, mod);
+        } else if (!this.urlToModuleMap.has(url)) {
+            this.urlToModuleMap.set(url, mod)
+        }
         return mod;
     }
 
     /**
-     * @description: 绑定模块依赖关系
+     * @description: 更新依赖图
      */
     async updateModuleInfo(
         mod: ModuleNode,
-        importedModules: Set<string | ModuleNode>
+        importedModules: Set<string | ModuleNode>,
+        acceptedModules: Set<string | ModuleNode>,
+        isSelfAccepting: boolean,
     ) {
+        mod.isSelfAccepting = isSelfAccepting;
         const prevImports = mod.importedModules;
         for (const curImports of importedModules) {
             const dep =
@@ -80,22 +91,43 @@ export class ModuleGraph {
                 prevImport.importers.delete(mod);
             }
         }
-    }
 
-    // HMR 触发时会执行这个方法
-    invalidateModule(file: string) {
-        const mod = this.idToModuleMap.get(file);
-        if (mod) {
-            // 更新时间戳
-            mod.lastHMRTimestamp = Date.now();
-            mod.transformResult = null;
-            mod.importers.forEach((importer) => {
-                this.invalidateModule(importer.id!);
-            });
+        // 更新 接受更新的模块
+        const deps = (mod.acceptedHmrDeps = new Set());
+        for (const accepted of acceptedModules) {
+            const dep =
+                typeof accepted === 'string'
+                    ? await this.ensureEntryFromUrl(accepted)
+                    : accepted
+            deps.add(dep)
         }
     }
 
-    private async _resolve(
+    /**
+     * @description: 文件变动时清除原先模块节点缓存
+     */
+    onFileChange(file: string) {
+        const mod = this.getModuleById(file);
+        mod && this.invalidateModule(mod);
+    }
+
+    /**
+     * @description: 清除模块节点缓存
+     */
+    invalidateModule(mod: ModuleNode) {
+        // 更新时间戳
+        mod.lastHMRTimestamp = Date.now();
+        // 清除代码转换结果
+        mod.transformResult = null;
+        // 引用当前模块的模块如果不接受当前模块的更新，也需要清除缓存
+        mod.importers.forEach((importer) => {
+            if (!importer.acceptedHmrDeps.has(mod)) {
+                this.invalidateModule(importer);
+            }
+        });
+    }
+
+    async _resolve(
         url: string
     ): Promise<{ url: string; resolvedId: string }> {
         const resolved = await this.resolveId(url);
@@ -112,6 +144,7 @@ export class ModuleGraph {
 - id：资源id/绝对路径
 - importers：存储引用当前模块节点的模块信息（被谁引用了）
 - importedModules：当前模块依赖的模块（引用谁了）
+- acceptedHmrDeps：接受哪些模块的热更新（接受哪些模块的更新）
 - transformResult：当前模块代码转化的结果
 - lastHMRTimestamp：上一次热更新的时间
 - isSelfAccepting：是否接受自身热更新
@@ -130,9 +163,10 @@ export class ModuleNode {
     transformResult: TransformResult | null = null;
     lastHMRTimestamp = 0;
     isSelfAccepting = false;
+    acceptedHmrDeps = new Set<ModuleNode>();
     type: 'js' | 'css';
     constructor(url: string) {
-				this.type = isDirectCSSRequest(url) ? 'css' : 'js';
+        this.type = isDirectCSSRequest(url) ? 'css' : 'js'
         this.url = url;
     }
 }
@@ -192,17 +226,19 @@ const loadAndTransform = async (
 
 ```typescript
 // node/server/transformRequest.ts
-async ensureEntryFromUrl(rawUrl: string): Promise<ModuleNode> {
-     const { url, resolvedId } = await this._resolve(rawUrl);
-     // 首先检查缓存，缓存存在则直接返回
-     if (this.urlToModuleMap.has(url)) return this.urlToModuleMap.get(url) as ModuleNode;
-     // 若无缓存，创建依赖节点并更新 urlToModuleMap 和 idToModuleMap
-     const mod = new ModuleNode(url);
-     mod.id = resolvedId;
-     this.urlToModuleMap.set(url, mod);
-     this.idToModuleMap.set(resolvedId, mod);      
-     return mod;
- }
+  async ensureEntryFromUrl(rawUrl: string): Promise<ModuleNode> {
+        const { url, resolvedId } = await this._resolve(rawUrl);
+        let mod = this.idToModuleMap.get(resolvedId);
+        // 检查缓存
+        if (!mod) {
+            mod = new ModuleNode(url);
+            mod.id = resolvedId;
+            this.idToModuleMap.set(resolvedId, mod);
+        } else if (!this.urlToModuleMap.has(url)) {
+            this.urlToModuleMap.set(url, mod)
+        }
+        return mod;
+    }
 ```
 
 
@@ -231,6 +267,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               const [url, resolvedId] = await normalizeUrl(specifier, modStart);
 							importedUrls.add(url);
             }
+            // 省略其它代码
             // 处理非css资源的模块依赖图，css的依赖关系由css插件内部处理
             if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls);
          	  // 省略其它代码
@@ -239,10 +276,13 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
 }
 
  // node/server/ModuleGraph.ts
- async updateModuleInfo(
+async updateModuleInfo(
         mod: ModuleNode,
-        importedModules: Set<string | ModuleNode>
+        importedModules: Set<string | ModuleNode>,
+        acceptedModules: Set<string | ModuleNode>,
+        isSelfAccepting: boolean,
     ) {
+        mod.isSelfAccepting = isSelfAccepting;
         const prevImports = mod.importedModules;
         for (const curImports of importedModules) {
             const dep =
@@ -262,6 +302,16 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             if (!importedModules.has(prevImport.url)) {
                 prevImport.importers.delete(mod);
             }
+        }
+
+        // 更新接受更新的模块
+        const deps = (mod.acceptedHmrDeps = new Set());
+        for (const accepted of acceptedModules) {
+            const dep =
+                typeof accepted === 'string'
+                    ? await this.ensureEntryFromUrl(accepted)
+                    : accepted
+            deps.add(dep)
         }
     }
 ```

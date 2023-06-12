@@ -2,11 +2,11 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 11:47:03
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-05-30 11:27:46
+ * @LastEditTime: 2023-06-12 17:03:26
  */
-import os from "os";
-import path from "path";
-import fs from "fs";
+import os from "node:os";
+import path from "node:path";
+import fs from "node:fs";
 import { builtinModules } from 'node:module'
 import resolve from 'resolve';
 // 调试包
@@ -146,6 +146,7 @@ export const isObject = (value: unknown): boolean => Object.prototype.toString.c
 export const arraify = <T>(target: T | T[]): T[] => isArray(target) ? target : [target];
 
 export const isArray = Array.isArray;
+export const isString = (value: unknown): value is string => typeof value === 'string';
 
 export const mergeConfigRecursively = (
     defaults: Record<string, any>,
@@ -240,3 +241,9 @@ export const isOptimizable = (
 const timestampRE = /\bt=\d{13}&?\b/;
 const trailingSeparatorRE = /[?&]$/;
 export const removeTimestampQuery = (url: string): string => url.replace(timestampRE, '').replace(trailingSeparatorRE, '');
+
+export function stripBase(path: string, base: string): string {
+    if (path === base) return '/';
+    const devBase = base.endsWith('/') ? base : base + '/';
+    return path.replace(RegExp('^' + devBase), '/');
+}

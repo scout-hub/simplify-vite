@@ -2,13 +2,13 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:59:15
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-09 11:23:14
+ * @LastEditTime: 2023-06-12 19:29:47
  */
 import { useState } from "react";
 import logo from "./logo.svg";
 import "./App.css";
 
-console.log(234);
+console.log(292131233);
 
 function App() {
   const [count, setCount] = useState(0);
@@ -52,10 +52,10 @@ function App() {
 
 export default App;
 
-// @ts-ignore
-if (import.meta.hot) {
-// @ts-ignore
-  import.meta.hot.accept(()=>{
-    console.log('update');
-  });
-}
+// // @ts-ignore
+// if (import.meta.hot) {
+// // @ts-ignore
+//   import.meta.hot.accept(()=>{
+//     console.log('update');
+//   });
+// }

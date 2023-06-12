@@ -2,7 +2,7 @@
  * @Author: Zhouqi
  * @Date: 2023-02-20 15:10:19
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-09 11:00:48
+ * @LastEditTime: 2023-06-12 19:26:23
  */
 import type { ImportSpecifier } from 'es-module-lexer';
 import { init, parse } from "es-module-lexer";
@@ -15,7 +15,8 @@ import {
     isInternalRequest,
     transformStableResult,
     isCSSRequest,
-    isExternalUrl
+    isExternalUrl,
+    stripBase
 } from "../utils";
 import { parse as parseJS } from 'acorn';
 // magic-string 用来作字符串编辑
@@ -28,6 +29,7 @@ import { getDepsOptimizer } from "../optimizer/optimizer";
 import { optimizedDepNeedsInterop } from "../optimizer";
 import { makeLegalIdentifier } from '@rollup/pluginutils';
 import { ModuleNode } from '../server/ModuleGraph';
+import { lexAcceptedHmrDeps } from '../server/hmr';
 
 const optimizedDepChunkRE = /\/chunk-[A-Z\d]{8}\.js/;
 
@@ -38,7 +40,7 @@ const markExplicitImport = (url: string) => isExplicitImportRequired(url) ? url 
 
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
     let serverContext: ServerContext;
-    const { root } = config;
+    const { root, base } = config;
     const clientPublicPath = path.posix.join('/', CLIENT_PUBLIC_PATH);
     return {
         name: "m-vite:import-analysis",
@@ -73,9 +75,15 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             const { moduleGraph } = serverContext;
             const importerModule = moduleGraph.getModuleById(importer)!;
             const importedUrls: Set<string | ModuleNode> = new Set();
+            const toAbsoluteUrl = (url: string) =>
+                path.posix.resolve(path.posix.dirname(importerModule.url), url)
             let hasHMR = false;
-            let isSelfAccepting = false
-
+            let isSelfAccepting = false;
+            const acceptedUrls = new Set<{
+                url: string
+                start: number
+                end: number
+            }>();
             // 对每一个 import 语句依次进行分析
             for (let index = 0; index < imports.length; index++) {
                 const importInfo = imports[index];
@@ -88,7 +96,19 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                     const prop = code.slice(modEnd, modEnd + 4);
                     if (prop === '.hot') {
                         hasHMR = true;
-                        if (code.slice(modEnd + 4, modEnd + 11) === '.accept') isSelfAccepting = true;
+                        if (code.slice(modEnd + 4, modEnd + 11) === '.accept') {
+                            // 解析aceept接受的依赖
+                            if (
+                                lexAcceptedHmrDeps(
+                                    code,
+                                    code.indexOf('(', modEnd + 11) + 1,
+                                    acceptedUrls,
+                                )
+                            ) {
+                                // 接受自身更新
+                                isSelfAccepting = true;
+                            }
+                        }
                     }
                 }
 
@@ -112,9 +132,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                     if (needsInterop) {
                         interopNamedImports(str(), imports[index], url, index);
                         rewriteDone = true;
-                        // if (url === '/node_modules/.m-vite/deps/react.js') {
-                        //     console.log(str().toString());
-                        // }
                     }
                 }
                 if (!rewriteDone) {
@@ -122,7 +139,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                         contentOnly: true,
                     });
                 }
-                importedUrls.add(url);
+                importedUrls.add(url)
             }
 
             // 只对使用了hmr api的模块进行处理
@@ -134,8 +151,20 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 )
             }
 
+            // 对热更新 accept 中的 url 做处理
+            const normalizedAcceptedUrls = new Set<string>()
+            for (const { url, start, end } of acceptedUrls) {
+                const [normalized] = await moduleGraph.resolveUrl(
+                    toAbsoluteUrl(markExplicitImport(url)),
+                )
+                normalizedAcceptedUrls.add(normalized)
+                str().overwrite(start, end, JSON.stringify(normalized), {
+                    contentOnly: true,
+                })
+            }
+
             // 处理非css资源的模块依赖图，css的依赖关系由css插件内部处理
-            if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls, isSelfAccepting);
+            if (!isCSSRequest(importer)) await moduleGraph.updateModuleInfo(importerModule, importedUrls, normalizedAcceptedUrls, isSelfAccepting);
 
             if (s) return transformStableResult(s);
             return {

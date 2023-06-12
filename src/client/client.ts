@@ -1,8 +1,9 @@
+
 /*
  * @Author: Zhouqi
  * @Date: 2023-02-22 16:33:28
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-09 13:28:37
+ * @LastEditTime: 2023-06-12 19:28:51
  */
 console.log("[vite] connecting...");
 
@@ -78,11 +79,15 @@ export const createHotContext = (ownerPath: string) => {
     }
 
     return {
-        accept(deps: any, callback?: any) {
-            // 这里仅考虑接受自身模块更新的情况
-            // import.meta.hot.accept()
+        accept(deps?: any, callback?: any) {
             if (typeof deps === "function" || !deps) {
-                acceptDeps([ownerPath], ([mod]: any) => deps && deps(mod));
+                // import.meta.hot.accept()
+                // 接受自身热更新
+                acceptDeps([ownerPath], ([mod]: any) => deps?.(mod));
+            } else if (Array.isArray(deps)) {
+                acceptDeps(deps, callback);
+            } else if (typeof deps === 'string') {
+                acceptDeps([deps], callback);
             }
         },
         // 模块不再生效的回调
@@ -96,27 +101,24 @@ export const createHotContext = (ownerPath: string) => {
 async function fetchUpdate({ path, timestamp, acceptedPath }: any) {
     const mod = hotModulesMap.get(path);
     if (!mod) return;
-
     const moduleMap = new Map();
-    const modulesToUpdate = new Set<string>();
-    modulesToUpdate.add(path);
+    const [acceptedPathWithoutQuery, query] = acceptedPath.split(`?`);
 
-    await Promise.all(
-        Array.from(modulesToUpdate).map(async (dep) => {
-            const [path, query] = dep.split(`?`);
-            try {
-                // 通过动态 import 拉取最新模块
-                const newMod = await import(
-                    path + `?t=${timestamp}${query ? `&${query}` : ""}`
-                );
-                moduleMap.set(dep, newMod);
-            } catch (e) { }
-        })
+    // 从 callbacks 中过滤出需要执行 accept 回调
+    const qualifiedCallbacks = mod.callbacks.filter(({ deps }) =>
+        deps.includes(acceptedPath),
     );
+    try {
+        // 通过动态 import 拉取最新模块
+        const newMod = await import(
+            acceptedPathWithoutQuery + `?t=${timestamp}${query ? `&${query}` : ""}`
+        );
+        moduleMap.set(path, newMod);
+    } catch (e) { }
 
     return () => {
         // 拉取最新模块后执行更新回调
-        for (const { deps, fn } of mod.callbacks) {
+        for (const { deps, fn } of qualifiedCallbacks) {
             fn(deps.map((dep: any) => moduleMap.get(dep)));
         }
         console.log(`[vite] hot updated: ${path}`);
