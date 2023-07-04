@@ -5,7 +5,7 @@
  * @LastEditTime: 2023-06-09 13:41:09
 -->
 # simplify-vite
-### 通过一步步实现简单的vite来学习vite的核心原理
+通过一步步实现简单的vite来学习vite的核心原理
 
 ### 内容输出 
 docs
