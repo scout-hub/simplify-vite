@@ -1,8 +1,8 @@
 <!--
  * @Author: Zhouqi
- * @Date: 2023-06-12 19:47:52
+ * @Date: 2023-07-04 10:33:59
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-12 19:47:52
+ * @LastEditTime: 2023-07-04 10:34:00
 -->
 # vite核心原理（七）——  HMR热重载
 
@@ -220,7 +220,7 @@ export const bindingHMREvents = (serverContext: ServerContext) => {
    ```
 
    我们打印一下注入后的 html 字符串内容，可以看到index.html文件加上了热重载文件的引入，当页面执行的时候就会去加载这个 client.ts并创建客户端的 websocket 连接
-   ![image-20230608135656110](/Users/scout/Library/Application Support/typora-user-images/image-20230608135656110.png)
+   ![image-20230608135656110](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230608135656110.png)
 
 
 

@@ -1,3 +1,9 @@
+<!--
+ * @Author: Zhouqi
+ * @Date: 2023-07-04 10:33:55
+ * @LastEditors: Zhouqi
+ * @LastEditTime: 2023-07-04 10:33:56
+-->
 # vite核心原理（六）——  资源请求处理(下)
 
 
@@ -305,9 +311,9 @@ async transform(code: string, importer: string) {
       }
       ```
       
-      ![image-20230606160433986](/Users/scout/Library/Application Support/typora-user-images/image-20230606160433986.png)
+      ![image-20230606160433986](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230606160433986.png)
       
-      ![image-20230606160514452](/Users/scout/Library/Application Support/typora-user-images/image-20230606160514452.png)
+      ![image-20230606160514452](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230606160514452.png)
 
    2. App.css
       vite 会借助cssPlugin对 css 资源进行处理。处理逻辑大致为将 css代码包装成 js代码返回，当浏览器加载完后执行 js 中的updateStyle创建 style 标签，并通过 innerHTML的方式渲染 css 内容。
@@ -370,7 +376,7 @@ async transform(code: string, importer: string) {
       }
       ```
 
-      ![image-20230606205049021](/Users/scout/Library/Application Support/typora-user-images/image-20230606205049021.png)
+      ![image-20230606205049021](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230606205049021.png)
 
    以上就是App.tsx 中其它资源的加载处理。
    
@@ -466,7 +472,10 @@ export function optimizedDepInfoFromFile(
 
 我们回到doTransform方法中，这个方法在之前介绍资源转换时有提及，我们注意最后一段代码 getDepsOptimizer(config)?.delayDepsOptimizerUntil(id, () => transformResult)。getDepsOptimizer是根据配置获取依赖优化器对象，在依赖优化器对象上有一个delayDepsOptimizerUntil方法。
 
-delayDepsOptimizerUntil方法的作用：延迟依赖优化直到满足条件。这个满足条件在第一次运行时指所有非预构建依赖加载完毕。
+delayDepsOptimizerUntil方法的作用：延迟依赖优化直到满足条件。这个满足条件在第一次运行时指所有非预构建依赖加载完毕。这里有个问题，为什么第一次运行时需要延迟依赖优化直到所有非预构建资源加载完毕？其实是为了避免某些场景下二次预构建的问题，假设有两个三方模块 A 和 B，它们都依赖 C 模块。A 模块在预构建阶段进行处理，此时会将 A 和 C 打包成一个产物。B 模块在运行时被发现，由于 A 和 B 都依赖 C，所以 C 需要单独被抽离成一个块，此时 A 产物会发生变化，Vite 必须要强制刷新页面来获取最新的预构建资源。为了解决这个问题，Vite 采用了这种延迟依赖优化的方式，将预构建延迟到页面加载的最后阶段执行，此时所有源文件都已经被编译处理完成，已经知道了所有需要预构建的依赖信息，之后一起打包处理。
+
+![image-20230704102342228](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230704102342228.png)
+
 seenIds：用来判断资源是否已经被处理过
 registeredIds：用来记录非预构建的依赖对象（main.tsx、App.tsx等），这个对象包含其资源 id 已经 done 函数，这个 done 函数就是() => transformResult，transformResult是执行loadAndTransform方法后返回的 promise 对象
 
@@ -537,11 +546,11 @@ const doTransform = async (
 
 我们在onCrawlEnd函数里面打上断点，看看浏览器请求的状态：
 
-![image-20230607152353529](/Users/scout/Library/Application Support/typora-user-images/image-20230607152353529.png)
+![](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230606205049021.png)
 
 图上很明显能看到，当非预构建资源全部加载完毕时，预构建资源（react_jsx-runtime、react-dom_client、react.js）全部处于 pending 状态。
 
-![image-20230607152622640](/Users/scout/Library/Application Support/typora-user-images/image-20230607152622640.png)
+![image-20230607152622640](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230607152622640.png)
 
 接下去就是onCrawlEnd的处理逻辑：
 

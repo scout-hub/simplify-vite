@@ -1,8 +1,8 @@
 <!--
  * @Author: Zhouqi
- * @Date: 2023-06-07 15:20:35
+ * @Date: 2023-07-04 09:49:32
  * @LastEditors: Zhouqi
- * @LastEditTime: 2023-06-07 15:20:36
+ * @LastEditTime: 2023-07-04 09:49:33
 -->
 # vite核心原理（五）—— 请求处理（上）
 
@@ -35,7 +35,7 @@ export const createServer = async (inlineConfig: InlineConfig = {}) => {
 
 我们通过vite搭建一个简单的react18项目，目录结构大致如下。其中静态页面为index.html，src下有一个入口文件main.tsx，一个函数式组件App.tsx以及样式文件App.css和静态资源logo,svg。我们可以将node_modules中的vite源码替换成自己实现的阉割版vite，方便调试代码。
 
-![image-20230601212205992](/Users/scout/Library/Application Support/typora-user-images/image-20230601212205992.png)
+![image-20230601212205992](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230601212205992.png)
 
 项目创建完成后可以通过pnpm dev的方式启动，这时候就会走我们前面两节介绍的配置解析、本地服务启动以及初步的预构建流程。至于说为什么是初步的预构建，有以下两点：
 
@@ -78,7 +78,7 @@ const getHtmlFilename = (url: string, server: ServerContext) => {
 
 当浏览器接收到html内容时就会开始解析内容，解析过程中如果遇到需要请求其它资源时，就会再次发情网络请求。以项目中的index.html为例会再发起对main.tsx文件的请求。
 
-![image-20230602133613727](/Users/scout/Library/Application Support/typora-user-images/image-20230602133613727.png)
+![image-20230602133613727](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230602133613727.png)
 
 当发起对/src/main.tsx文件的请求时，会进入到transformMiddleware中间件的处理流程：
 
@@ -361,7 +361,7 @@ export function esbuildPlugin(): Plugin {
 
 我们可以在vscode的调试终端中打印出code的内容。当我们拿到load之后的内容后就会结束load钩子的调用，接下去就是transform钩子的执行
 
-![image-20230605171252088](/Users/scout/Library/Application Support/typora-user-images/image-20230605171252088.png)
+![image-20230605171252088](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230605171252088.png)
 
 首先会执行esbuildPlugin的transform方法：
 
@@ -548,7 +548,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
    - 是否是预构建缓存资源
    - 内部优化的资源不需要 es interop 并且被排除在外（react在构建时会生成chunk-xxxx.js）
    - 是否需要转换（needsInterop）。上述import { jsx } from "react/jsx-runtime"在浏览器端运行会报错，因为react/jsx-runtime内部是个默认导出，它需要通过将命名导入重写为 const 赋值来支持命名导入。其中needsInterop的值也是借助了es-module-lexer的parse方法加后续分析得到，具体可以看optimizedDepNeedsInterop的逻辑
-     ![image-20230605190235789](/Users/scout/Library/Application Support/typora-user-images/image-20230605190235789.png)
+     ![image-20230605190235789](https://raw.githubusercontent.com/scout-hub/picgo-bed/dev/image-20230605190235789.png)
 
    ```typescript
    // node/plguins/importAnalysis.ts
