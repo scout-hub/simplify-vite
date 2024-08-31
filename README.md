@@ -2,7 +2,7 @@
 通过一步步实现简单的vite来学习vite的核心原理
 
 ### 内容输出 
-https://github.com/scout-hub/technology-blog
+[https://github.com/scout-hub/technology-blog](https://github.com/scout-hub/technology-blog/tree/dev/vite/vite%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90)
 
 ### 开发
 pnpm start
